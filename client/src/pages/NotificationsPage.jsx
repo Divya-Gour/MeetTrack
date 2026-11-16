@@ -100,19 +100,18 @@ export default function NotificationsPage() {
           <button
             key={type}
             onClick={() => setFilterType(type)}
-            className={`px-3 py-1.5 rounded-btn text-xs font-semibold capitalize whitespace-nowrap transition-colors ${
-              filterType === type
+            className={`px-3 py-1.5 rounded-btn text-xs font-semibold capitalize whitespace-nowrap transition-colors ${filterType === type
                 ? 'bg-text-primary text-bg font-bold shadow-xs'
                 : 'text-text-secondary hover:text-text-primary hover:bg-surface-muted'
-            }`}
+              }`}
           >
             {type === 'quorum'
               ? 'Quorum Alerts'
               : type === 'action'
-              ? 'Action Items'
-              : type === 'approval'
-              ? 'Sign-offs'
-              : type}
+                ? 'Action Items'
+                : type === 'approval'
+                  ? 'Sign-offs'
+                  : type}
           </button>
         ))}
       </div>
@@ -130,19 +129,17 @@ export default function NotificationsPage() {
             <Card
               key={notif.id}
               padding="p-4 sm:p-5"
-              className={`hover:border-accent transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                notif.unread ? 'border-accent/60 bg-accent-tint/10 shadow-xs' : ''
-              }`}
+              className={`hover:border-accent transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${notif.unread ? 'border-accent/60 bg-accent-tint/10 shadow-xs' : ''
+                }`}
             >
               <div className="flex items-start gap-3.5">
                 <div
-                  className={`w-9 h-9 rounded-btn flex items-center justify-center shrink-0 mt-0.5 ${
-                    notif.type === 'action'
+                  className={`w-9 h-9 rounded-btn flex items-center justify-center shrink-0 mt-0.5 ${notif.type === 'action'
                       ? 'bg-error-bg text-error'
                       : notif.type === 'quorum'
-                      ? 'bg-accent text-accent-text font-bold'
-                      : 'bg-surface-muted text-text-primary'
-                  }`}
+                        ? 'bg-accent text-accent-text font-bold'
+                        : 'bg-surface-muted text-text-primary'
+                    }`}
                 >
                   {notif.type === 'action' ? (
                     <AlertTriangle className="w-4 h-4" />

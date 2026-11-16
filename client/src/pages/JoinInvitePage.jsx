@@ -273,9 +273,8 @@ export default function JoinInvitePage() {
             <div className="p-3.5 bg-surface-muted border border-border rounded-card space-y-1.5 text-xs">
               <div className="flex items-center gap-2">
                 <span
-                  className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${
-                    hasMinLength ? 'bg-success text-white' : 'bg-border text-text-secondary'
-                  }`}
+                  className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${hasMinLength ? 'bg-success text-white' : 'bg-border text-text-secondary'
+                    }`}
                 >
                   <Check className="w-2.5 h-2.5 stroke-[3]" />
                 </span>
@@ -285,9 +284,8 @@ export default function JoinInvitePage() {
               </div>
               <div className="flex items-center gap-2">
                 <span
-                  className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${
-                    hasNumber ? 'bg-success text-white' : 'bg-border text-text-secondary'
-                  }`}
+                  className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${hasNumber ? 'bg-success text-white' : 'bg-border text-text-secondary'
+                    }`}
                 >
                   <Check className="w-2.5 h-2.5 stroke-[3]" />
                 </span>
@@ -297,9 +295,8 @@ export default function JoinInvitePage() {
               </div>
               <div className="flex items-center gap-2">
                 <span
-                  className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${
-                    hasSymbol ? 'bg-success text-white' : 'bg-border text-text-secondary'
-                  }`}
+                  className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${hasSymbol ? 'bg-success text-white' : 'bg-border text-text-secondary'
+                    }`}
                 >
                   <Check className="w-2.5 h-2.5 stroke-[3]" />
                 </span>

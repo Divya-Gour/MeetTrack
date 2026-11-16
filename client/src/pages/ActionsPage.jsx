@@ -218,21 +218,19 @@ export default function ActionsPage() {
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setActiveTab('all')}
-            className={`px-3 py-1.5 rounded-btn text-xs font-semibold transition-colors ${
-              activeTab === 'all'
+            className={`px-3 py-1.5 rounded-btn text-xs font-semibold transition-colors ${activeTab === 'all'
                 ? 'bg-text-primary text-bg font-bold shadow-xs'
                 : 'text-text-secondary hover:text-text-primary hover:bg-surface-muted'
-            }`}
+              }`}
           >
             All Workspace Actions ({actions.length})
           </button>
           <button
             onClick={() => setActiveTab('my')}
-            className={`px-3 py-1.5 rounded-btn text-xs font-semibold transition-colors ${
-              activeTab === 'my'
+            className={`px-3 py-1.5 rounded-btn text-xs font-semibold transition-colors ${activeTab === 'my'
                 ? 'bg-text-primary text-bg font-bold shadow-xs'
                 : 'text-text-secondary hover:text-text-primary hover:bg-surface-muted'
-            }`}
+              }`}
           >
             My Assigned Actions ({actions.filter((a) => a.ownerId === currentUser?.id).length})
           </button>
@@ -306,9 +304,8 @@ export default function ActionsPage() {
                     <tr
                       key={act.id}
                       onClick={() => handleOpenDetail(act)}
-                      className={`hover:bg-surface-muted/50 cursor-pointer transition-colors ${
-                        overdue ? 'bg-error-bg/30' : ''
-                      }`}
+                      className={`hover:bg-surface-muted/50 cursor-pointer transition-colors ${overdue ? 'bg-error-bg/30' : ''
+                        }`}
                     >
                       <td className="py-3.5 px-4 font-medium text-text-primary">
                         <div className="flex items-center gap-2.5">
@@ -451,11 +448,10 @@ export default function ActionsPage() {
                   <button
                     key={st}
                     onClick={() => handleStatusChange(st)}
-                    className={`py-2 px-3 rounded-btn border text-center font-semibold transition-all ${
-                      selectedAction.status === st
+                    className={`py-2 px-3 rounded-btn border text-center font-semibold transition-all ${selectedAction.status === st
                         ? 'bg-text-primary text-bg font-bold border-text-primary'
                         : 'bg-surface hover:bg-surface-muted text-text-secondary border-border'
-                    }`}
+                      }`}
                   >
                     {st}
                   </button>
@@ -522,11 +518,10 @@ export default function ActionsPage() {
                   {selectedAction.blockers?.map((blk) => (
                     <div
                       key={blk.id}
-                      className={`p-3 rounded-card border text-xs space-y-1.5 ${
-                        blk.resolved
+                      className={`p-3 rounded-card border text-xs space-y-1.5 ${blk.resolved
                           ? 'bg-surface-muted/40 border-border text-text-secondary line-through'
                           : 'bg-error-bg/30 border-error-border text-text-primary'
-                      }`}
+                        }`}
                     >
                       <p className="leading-relaxed">"{blk.reason}"</p>
                       <div className="flex items-center justify-between text-[10px] text-text-secondary font-mono">
