@@ -1,4 +1,4 @@
-// client/src/pages/ScreenSetupWizard.jsx
+// client/src/pages/SetupWizardPage.jsx
 // First-Run Live Workspace Setup Wizard (Section 3 of Prompt v2)
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -21,7 +21,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../components/Toast';
 import Button from '../components/Button';
 
-export default function ScreenSetupWizard() {
+export default function SetupWizardPage() {
   const navigate = useNavigate();
   const { enterLiveMode, isDemo } = useAuth();
   const { showToast } = useToast();

@@ -22,7 +22,7 @@ import Pill from '../components/Pill';
 import Modal from '../components/Modal';
 import { useToast } from '../components/Toast';
 
-export default function Screen05Calendar() {
+export default function CalendarPage() {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
   const isCoordinator = canEditMeetings(currentUser);

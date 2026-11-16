@@ -27,7 +27,7 @@ import Pill from '../components/Pill';
 import Modal from '../components/Modal';
 import { useToast } from '../components/Toast';
 
-export default function Screen06MeetingDetails() {
+export default function MeetingDetailsPage() {
   const { id } = useParams();
   const { currentUser } = useAuth();
   const { showToast } = useToast();
@@ -151,7 +151,7 @@ export default function Screen06MeetingDetails() {
           {/* Action Buttons */}
           <div className="flex items-center gap-2.5 self-start lg:self-center shrink-0">
             <Link
-              to={`/minutes/min-101`}
+              to={`/minutes/${meeting.minutesId || meeting.id || 'min-1'}`}
               className="px-4 py-2 rounded-btn bg-accent text-accent-text hover:bg-accent-hover text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
             >
               <FileText className="w-3.5 h-3.5" />

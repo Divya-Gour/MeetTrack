@@ -28,7 +28,7 @@ import Pill from '../components/Pill';
 import Forbidden403 from './Forbidden403';
 import { useToast } from '../components/Toast';
 
-export default function Screen13Admin() {
+export default function AdminPage() {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
 

@@ -1,4 +1,4 @@
-// client/src/pages/ScreenJoinInvite.jsx
+// client/src/pages/JoinInvitePage.jsx
 // Section 5: Team Invitation Acceptance & Account Provisioning
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -18,7 +18,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../components/Toast';
 import Button from '../components/Button';
 
-export default function ScreenJoinInvite() {
+export default function JoinInvitePage() {
   const { token } = useParams();
   const navigate = useNavigate();
   const { enterLiveMode } = useAuth();

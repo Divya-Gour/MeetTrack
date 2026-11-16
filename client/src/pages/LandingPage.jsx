@@ -1,4 +1,4 @@
-// Stitch screen 01: Landing page
+// Landing Page
 // Matches Stitch design 4e24a14953e745bc9634b3edad5e328e (MeetTrack Premium SaaS Landing Page)
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -22,7 +22,7 @@ import { useTheme } from '../app/theme';
 import { useAuth } from '../auth/AuthContext';
 import { Sun, Moon, Laptop } from 'lucide-react';
 
-export default function Screen01Landing() {
+export default function LandingPage() {
   const { theme, setTheme } = useTheme();
   const { enterDemoMode } = useAuth();
   const navigate = useNavigate();

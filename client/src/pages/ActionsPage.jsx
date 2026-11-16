@@ -36,7 +36,7 @@ import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '../components/Toast';
 
-export default function Screen09Actions() {
+export default function ActionsPage() {
   const { currentUser, allUsers } = useAuth();
   const { showToast } = useToast();
   const isCoordinator = canManageAllActions(currentUser);

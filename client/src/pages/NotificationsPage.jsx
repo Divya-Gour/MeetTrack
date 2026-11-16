@@ -25,7 +25,7 @@ import Pill from '../components/Pill';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '../components/Toast';
 
-export default function Screen12Notifications() {
+export default function NotificationsPage() {
   const { showToast } = useToast();
   const [notifications, setNotifications] = useState([]);
   const [filterType, setFilterType] = useState('All'); // 'All' | 'Unread' | 'quorum' | 'action' | 'approval'

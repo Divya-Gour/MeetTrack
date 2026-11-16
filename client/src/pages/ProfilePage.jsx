@@ -29,7 +29,7 @@ import Modal from '../components/Modal';
 import Button from '../components/Button';
 import Pill from '../components/Pill';
 
-export default function Screen14Profile() {
+export default function ProfilePage() {
   const { currentUser, switchDemoRole } = useAuth();
   const { theme, setTheme } = useTheme();
   const { addToast } = useToast();

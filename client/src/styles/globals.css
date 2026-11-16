@@ -104,6 +104,11 @@
 }
 
 /* Custom minimal scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--bg);
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

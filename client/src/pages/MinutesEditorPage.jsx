@@ -25,7 +25,7 @@ import Pill from '../components/Pill';
 import Modal from '../components/Modal';
 import { useToast } from '../components/Toast';
 
-export default function Screen07MinutesEditor() {
+export default function MinutesEditorPage() {
   const { id } = useParams();
   const { currentUser } = useAuth();
   const { showToast } = useToast();
@@ -38,16 +38,33 @@ export default function Screen07MinutesEditor() {
   const [versionDrawerOpen, setVersionDrawerOpen] = useState(false);
   const [conflictSimulated, setConflictSimulated] = useState(false);
 
+  const extractMarkdown = (data) => {
+    if (!data) return '';
+    if (typeof data.content === 'string') return data.content;
+    if (data.contentMarkdown) return data.contentMarkdown;
+    if (data.content && typeof data.content === 'object') {
+      const parts = [
+        data.content.attendanceSummary && `## Attendance Summary\n${data.content.attendanceSummary}`,
+        data.content.discussionPoints && `## Discussion Points\n${data.content.discussionPoints}`,
+        data.content.decisions && `## Decisions\n${data.content.decisions}`,
+        data.content.outcomes && `## Outcomes and Next Steps\n${data.content.outcomes}`,
+      ].filter(Boolean);
+      return parts.join('\n\n');
+    }
+    return '';
+  };
+
   useEffect(() => {
-    getMinutesById(id || 'min-101')
+    const targetId = id || 'min-1';
+    getMinutesById(targetId)
       .then((data) => {
         setMinutes(data);
-        setContent(data.contentMarkdown);
+        setContent(extractMarkdown(data));
       })
       .catch(() => {
-        getMinutesById('min-101').then((data) => {
+        getMinutesById('min-1').then((data) => {
           setMinutes(data);
-          setContent(data.contentMarkdown);
+          setContent(extractMarkdown(data));
         });
       })
       .finally(() => setLoading(false));

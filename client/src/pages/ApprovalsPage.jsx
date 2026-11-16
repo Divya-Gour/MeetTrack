@@ -31,7 +31,7 @@ import Modal from '../components/Modal';
 import { useToast } from '../components/Toast';
 import Forbidden403 from './Forbidden403';
 
-export default function Screen08Approvals() {
+export default function ApprovalsPage() {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
 
@@ -45,9 +45,25 @@ export default function Screen08Approvals() {
   const [approvalNote, setApprovalNote] = useState('');
   const [loading, setLoading] = useState(true);
 
+  const displayContent = (min) => {
+    if (!min) return '';
+    if (typeof min.content === 'string') return min.content;
+    if (min.contentMarkdown) return min.contentMarkdown;
+    if (min.content && typeof min.content === 'object') {
+      const parts = [
+        min.content.attendanceSummary && `### Attendance Summary\n${min.content.attendanceSummary}`,
+        min.content.discussionPoints && `### Discussion Points\n${min.content.discussionPoints}`,
+        min.content.decisions && `### Decisions\n${min.content.decisions}`,
+        min.content.outcomes && `### Outcomes and Next Steps\n${min.content.outcomes}`,
+      ].filter(Boolean);
+      return parts.join('\n\n');
+    }
+    return '';
+  };
+
   const fetchMinutes = async () => {
     try {
-      const data = await getMinutesById('min-101');
+      const data = await getMinutesById('min-2');
       setMinutes(data);
     } catch (err) {
       showToast('Error loading approval queue item', 'error');
@@ -241,7 +257,7 @@ export default function Screen08Approvals() {
 
         {/* Markdown Document Preview */}
         <div className="p-6 bg-surface rounded-card border border-border shadow-xs text-xs sm:text-sm font-body whitespace-pre-wrap leading-relaxed text-text-primary max-h-[460px] overflow-y-auto">
-          {minutes.contentMarkdown}
+          {displayContent(minutes)}
         </div>
 
         {/* Approval Signatures Log */}

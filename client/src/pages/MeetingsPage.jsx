@@ -26,7 +26,7 @@ import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import { useToast } from '../components/Toast';
 
-export default function Screen04Meetings() {
+export default function MeetingsPage() {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
   const isCoordinator = canEditMeetings(currentUser);
@@ -204,7 +204,7 @@ export default function Screen04Meetings() {
                 </Link>
 
                 <Link
-                  to={`/minutes/min-101`}
+                  to={`/minutes/${mtg.minutesId || mtg.id || 'min-1'}`}
                   className="px-3.5 py-2 rounded-btn bg-accent text-accent-text hover:bg-accent-hover text-xs font-semibold shadow-xs transition-colors flex items-center gap-1.5"
                 >
                   <span>Minutes</span>

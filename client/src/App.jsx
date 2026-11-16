@@ -7,23 +7,23 @@ import RequireRole from './auth/RequireRole';
 import Shell from './components/Shell';
 import AssistantButton from './assistant/AssistantButton';
 
-// Screens
-import Screen01Landing from './pages/Screen01Landing';
-import Screen02Auth from './pages/Screen02Auth';
-import ScreenSetupWizard from './pages/ScreenSetupWizard';
-import ScreenJoinInvite from './pages/ScreenJoinInvite';
-import Screen03Dashboard from './pages/Screen03Dashboard';
-import Screen04Meetings from './pages/Screen04Meetings';
-import Screen05Calendar from './pages/Screen05Calendar';
-import Screen06MeetingDetails from './pages/Screen06MeetingDetails';
-import Screen07MinutesEditor from './pages/Screen07MinutesEditor';
-import Screen08Approvals from './pages/Screen08Approvals';
-import Screen09Actions from './pages/Screen09Actions';
-import Screen10Decisions from './pages/Screen10Decisions';
-import Screen11Reports from './pages/Screen11Reports';
-import Screen12Notifications from './pages/Screen12Notifications';
-import Screen13Admin from './pages/Screen13Admin';
-import Screen14Profile from './pages/Screen14Profile';
+// Pages
+import LandingPage from './pages/LandingPage';
+import AuthPage from './pages/AuthPage';
+import SetupWizardPage from './pages/SetupWizardPage';
+import JoinInvitePage from './pages/JoinInvitePage';
+import DashboardPage from './pages/DashboardPage';
+import MeetingsPage from './pages/MeetingsPage';
+import CalendarPage from './pages/CalendarPage';
+import MeetingDetailsPage from './pages/MeetingDetailsPage';
+import MinutesEditorPage from './pages/MinutesEditorPage';
+import ApprovalsPage from './pages/ApprovalsPage';
+import ActionsPage from './pages/ActionsPage';
+import DecisionsPage from './pages/DecisionsPage';
+import ReportsPage from './pages/ReportsPage';
+import NotificationsPage from './pages/NotificationsPage';
+import AdminPage from './pages/AdminPage';
+import ProfilePage from './pages/ProfilePage';
 import Forbidden403 from './pages/Forbidden403';
 import NotFound404 from './pages/NotFound404';
 
@@ -42,17 +42,17 @@ export default function App() {
 
             <Routes>
               {/* Public Entry Routes */}
-              <Route path="/" element={<Screen01Landing />} />
-              <Route path="/login" element={<Screen02Auth />} />
-              <Route path="/setup" element={<ScreenSetupWizard />} />
-              <Route path="/join/:token" element={<ScreenJoinInvite />} />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<AuthPage />} />
+              <Route path="/setup" element={<SetupWizardPage />} />
+              <Route path="/join/:token" element={<JoinInvitePage />} />
 
               {/* Protected App Routes (inside Shell) */}
               <Route
                 path="/dashboard"
                 element={
                   <ShellWrapper>
-                    <Screen03Dashboard />
+                    <DashboardPage />
                   </ShellWrapper>
                 }
               />
@@ -60,7 +60,7 @@ export default function App() {
                 path="/meetings"
                 element={
                   <ShellWrapper>
-                    <Screen04Meetings />
+                    <MeetingsPage />
                   </ShellWrapper>
                 }
               />
@@ -68,7 +68,7 @@ export default function App() {
                 path="/meetings/:id"
                 element={
                   <ShellWrapper>
-                    <Screen06MeetingDetails />
+                    <MeetingDetailsPage />
                   </ShellWrapper>
                 }
               />
@@ -76,7 +76,7 @@ export default function App() {
                 path="/calendar"
                 element={
                   <ShellWrapper>
-                    <Screen05Calendar />
+                    <CalendarPage />
                   </ShellWrapper>
                 }
               />
@@ -84,7 +84,7 @@ export default function App() {
                 path="/minutes/:id"
                 element={
                   <ShellWrapper>
-                    <Screen07MinutesEditor />
+                    <MinutesEditorPage />
                   </ShellWrapper>
                 }
               />
@@ -92,7 +92,7 @@ export default function App() {
                 path="/approvals"
                 element={
                   <ShellWrapper>
-                    <Screen08Approvals />
+                    <ApprovalsPage />
                   </ShellWrapper>
                 }
               />
@@ -100,7 +100,7 @@ export default function App() {
                 path="/actions"
                 element={
                   <ShellWrapper>
-                    <Screen09Actions />
+                    <ActionsPage />
                   </ShellWrapper>
                 }
               />
@@ -108,7 +108,7 @@ export default function App() {
                 path="/decisions"
                 element={
                   <ShellWrapper>
-                    <Screen10Decisions />
+                    <DecisionsPage />
                   </ShellWrapper>
                 }
               />
@@ -117,7 +117,7 @@ export default function App() {
                 element={
                   <ShellWrapper>
                     <RequireRole allowedRoles={['Admin', 'Coordinator']}>
-                      <Screen11Reports />
+                      <ReportsPage />
                     </RequireRole>
                   </ShellWrapper>
                 }
@@ -126,7 +126,7 @@ export default function App() {
                 path="/notifications"
                 element={
                   <ShellWrapper>
-                    <Screen12Notifications />
+                    <NotificationsPage />
                   </ShellWrapper>
                 }
               />
@@ -135,7 +135,7 @@ export default function App() {
                 element={
                   <ShellWrapper>
                     <RequireRole allowedRoles={['Admin']}>
-                      <Screen13Admin />
+                      <AdminPage />
                     </RequireRole>
                   </ShellWrapper>
                 }
@@ -144,7 +144,7 @@ export default function App() {
                 path="/profile"
                 element={
                   <ShellWrapper>
-                    <Screen14Profile />
+                    <ProfilePage />
                   </ShellWrapper>
                 }
               />

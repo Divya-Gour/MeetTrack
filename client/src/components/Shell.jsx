@@ -1,5 +1,5 @@
 // src/components/Shell.jsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -47,6 +47,13 @@ export default function Shell({ children }) {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [demoDropdownOpen, setDemoDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const mainScrollRef = useRef(null);
+
+  useEffect(() => {
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [location.pathname]);
 
   const unreadNotifsCount = MOCK_NOTIFICATIONS.filter((n) => n.unread).length;
 
@@ -87,13 +94,15 @@ export default function Shell({ children }) {
   ];
 
   return (
-    <div className="min-h-screen bg-bg flex flex-col selection:bg-accent selection:text-text-primary">
+    <div className="h-screen h-[100dvh] max-h-screen bg-bg flex flex-col selection:bg-accent selection:text-text-primary overflow-hidden">
       {/* ---------------- PERSISTENT DEMO BANNER (Demo mode only) ---------------- */}
-      <DemoBanner />
+      <div className="shrink-0 z-40">
+        <DemoBanner />
+      </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex min-h-0 overflow-hidden relative">
         {/* ---------------- DESKTOP SIDEBAR (820px+) ---------------- */}
-        <aside className="hidden lg:flex w-64 bg-surface border-r border-border flex-col justify-between select-none z-30 shrink-0">
+        <aside className="hidden lg:flex w-64 bg-surface border-r border-border flex-col justify-between select-none z-30 shrink-0 h-full overflow-y-auto">
           <div className="flex flex-col h-full">
             {/* Logo */}
             <div className="h-16 px-5 flex items-center justify-between border-b border-border">
@@ -277,9 +286,13 @@ export default function Shell({ children }) {
         )}
 
         {/* ---------------- MAIN CONTENT AREA ---------------- */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <div
+          ref={mainScrollRef}
+          id="main-content-scroll"
+          className="flex-1 flex flex-col min-w-0 min-h-0 overflow-y-auto scroll-smooth"
+        >
           {/* Top Bar */}
-          <header className="sticky top-0 z-30 h-16 bg-surface/90 backdrop-blur-md border-b border-border px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+          <header className="sticky top-0 z-30 shrink-0 h-16 bg-surface/90 backdrop-blur-md border-b border-border px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
             {/* Left: Mobile hamburger & breadcrumb */}
             <div className="flex items-center gap-3">
               <button
@@ -295,8 +308,11 @@ export default function Shell({ children }) {
                   {location.pathname.replace('/', '') || 'Dashboard'}
                 </span>
                 <span className="text-text-secondary hidden sm:inline">•</span>
-                <span className="text-text-secondary text-xs font-mono hidden sm:inline">
-                  Acme Governance
+                <span
+                  className="text-text-secondary text-xs font-mono hidden sm:inline truncate max-w-[220px]"
+                  title={currentWorkspace?.name || (isDemo ? 'Engineering Fest 2026' : 'MeetTrack Workspace')}
+                >
+                  {currentWorkspace?.name || (isDemo ? 'Engineering Fest 2026' : 'MeetTrack Workspace')}
                 </span>
               </div>
             </div>
@@ -448,7 +464,7 @@ export default function Shell({ children }) {
           </header>
 
           {/* Main Body */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 animate-fade-in">{children}</main>
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 animate-fade-in pb-20">{children}</main>
         </div>
       </div>
     </div>

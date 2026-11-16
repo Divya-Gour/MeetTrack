@@ -34,7 +34,7 @@ import Pill from '../components/Pill';
 import Forbidden403 from './Forbidden403';
 import { useToast } from '../components/Toast';
 
-export default function Screen11Reports() {
+export default function ReportsPage() {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
 

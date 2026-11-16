@@ -65,7 +65,7 @@ export default function Modal({
       {/* Modal Surface */}
       <div
         ref={modalRef}
-        className={`relative w-full ${maxWidth} bg-surface border border-border rounded-modal shadow-2xl p-6 sm:p-7 z-10 animate-modal-enter`}
+        className={`relative w-full ${maxWidth} bg-surface border border-border rounded-modal shadow-2xl p-6 sm:p-7 z-10 animate-modal-enter max-h-[90vh] overflow-y-auto my-auto`}
       >
         <div className="flex items-start justify-between gap-4 pb-3 mb-4 border-b border-border">
           <div>

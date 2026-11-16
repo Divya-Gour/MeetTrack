@@ -32,7 +32,7 @@ import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '../components/Toast';
 
-export default function Screen10Decisions() {
+export default function DecisionsPage() {
   const [searchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
 

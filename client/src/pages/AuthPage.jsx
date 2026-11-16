@@ -1,4 +1,4 @@
-// Stitch screen 02: Authentication (sign in, demo entry, workspace setup, forgot, reset)
+// Auth Page (sign in, demo entry, workspace setup, forgot, reset)
 // Matches Stitch design 775fb8220e2e4362b53199707bb6bfe8 (MeetTrack Sign In - Electric Lime Classic)
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
@@ -20,7 +20,7 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../components/Toast';
 
-export default function Screen02Auth() {
+export default function AuthPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { enterDemoMode, enterLiveMode, demoUsers } = useAuth();

@@ -34,7 +34,7 @@ import Modal from '../components/Modal';
 import { TableSkeleton, MetricCardSkeleton } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 
-export default function Screen03Dashboard() {
+export default function DashboardPage() {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
