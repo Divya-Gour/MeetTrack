@@ -1,0 +1,60 @@
+/* Design tokens according to Stitch extracted themes */
+:root {
+  --bg: #F4F5F3;
+  --surface: #FFFFFF;
+  --surface-muted: #ECEFEB;
+  --surface-hover: #E4E8E3;
+  --text-primary: #171B18;
+  --text-secondary: #626B63;
+  --border: #DDE2DC;
+  --border-light: #ECEFEB;
+  --accent: #B6E34A;
+  --accent-hover: #A7D83D;
+  --accent-tint: rgba(182, 227, 74, 0.15);
+  --accent-text: #171B18;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --card-shadow-hover: 0 8px 20px -6px rgba(0, 0, 0, 0.08);
+  --error: #DC2626;
+  --error-bg: #FEF2F2;
+  --error-border: #FCA5A5;
+  --warning: #D97706;
+  --warning-bg: #FFFBEB;
+  --warning-border: #FCD34D;
+  --success: #16A34A;
+  --success-bg: #F0FDF4;
+  --success-border: #86EFAC;
+  --info: #2563EB;
+  --info-bg: #EFF6FF;
+  --info-border: #93C5FD;
+}
+
+[data-mode="dark"],
+.dark {
+  --bg: #111512;
+  --surface: #1C231E;
+  --surface-muted: #252D27;
+  --surface-hover: #2E3830;
+  --text-primary: #F4F5F3;
+  --text-secondary: #A7B0A5;
+  --border: #303A32;
+  --border-light: #252D27;
+  --accent: #B6E34A;
+  --accent-hover: #A7D83D;
+  --accent-tint: rgba(182, 227, 74, 0.18);
+  --accent-text: #171B18;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --card-shadow-hover: 0 8px 24px -6px rgba(0, 0, 0, 0.35);
+  --error: #F87171;
+  --error-bg: rgba(220, 38, 38, 0.15);
+  --error-border: rgba(248, 113, 113, 0.3);
+  --warning: #FBBF24;
+  --warning-bg: rgba(217, 119, 6, 0.15);
+  --warning-border: rgba(251, 191, 36, 0.3);
+  --success: #4ADE80;
+  --success-bg: rgba(22, 163, 74, 0.15);
+  --success-border: rgba(74, 222, 128, 0.3);
+  --info: #60A5FA;
+  --info-bg: rgba(37, 99, 235, 0.15);
+  --info-border: rgba(96, 165, 250, 0.3);
+}
+

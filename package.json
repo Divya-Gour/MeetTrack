@@ -1,0 +1,15 @@
+{
+  "name": "meettrack-monorepo",
+  "version": "2.0.0",
+  "private": true,
+  "description": "MeetTrack: High-trust meeting governance, quorum protocol, and cryptographic minute sealing platform",
+  "scripts": {
+    "dev": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "preview": "npm --prefix client run preview",
+    "server": "npm --prefix server run dev",
+    "server:start": "npm --prefix server run start",
+    "seed:demo": "npm --prefix server run seed"
+  }
+}
+
