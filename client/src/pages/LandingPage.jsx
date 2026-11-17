@@ -1,6 +1,6 @@
 // Landing Page
 // Matches Stitch design 4e24a14953e745bc9634b3edad5e328e (MeetTrack Premium SaaS Landing Page)
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,

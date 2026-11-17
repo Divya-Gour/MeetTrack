@@ -6,6 +6,7 @@ import { ToastProvider } from './components/Toast';
 import RequireRole from './auth/RequireRole';
 import Shell from './components/Shell';
 import AssistantButton from './assistant/AssistantButton';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -33,10 +34,11 @@ function ShellWrapper({ children }) {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <ToastProvider>
-          <BrowserRouter>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <BrowserRouter>
             {/* Global Floating AI Assistant Button */}
             <AssistantButton />
 
@@ -166,5 +168,6 @@ export default function App() {
         </ToastProvider>
       </AuthProvider>
     </ThemeProvider>
+    </ErrorBoundary>
   );
 }

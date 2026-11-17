@@ -289,7 +289,8 @@ export default function Shell({ children }) {
         <div
           ref={mainScrollRef}
           id="main-content-scroll"
-          className="flex-1 flex flex-col min-w-0 min-h-0 overflow-y-auto scroll-smooth"
+          className="flex-1 flex flex-col min-w-0 min-h-0 overflow-y-auto overflow-x-hidden scroll-smooth overscroll-y-contain"
+          style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {/* Top Bar */}
           <header className="sticky top-0 z-30 shrink-0 h-16 bg-surface/90 backdrop-blur-md border-b border-border px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">

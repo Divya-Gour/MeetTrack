@@ -30,7 +30,7 @@ async function generateChatCompletion({ systemInstruction, contents }) {
 
   try {
     const response = await client.models.generateContent({
-      model: config.geminiModel || 'gemini-2.5-flash',
+      model: config.geminiModel || 'gemini-3.5-flash-lite',
       contents,
       config: {
         systemInstruction,

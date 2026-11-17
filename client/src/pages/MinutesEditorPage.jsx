@@ -24,6 +24,7 @@ import {
   updateMinutes,
   submitMinutesForApproval,
   getMinutesVersions,
+  getMinutesVersionBody,
   restoreMinutesVersion,
   getMinutesPdfUrl,
 } from '../services/api';
@@ -93,9 +94,10 @@ export default function MinutesEditorPage() {
 
   const handleRestoreVersion = async (verNum) => {
     try {
-      const restored = await restoreMinutesVersion(minutes.id || minutes._id, verNum);
-      setMinutes(restored);
-      setContent(extractMarkdown(restored));
+      await restoreMinutesVersion(minutes.id || minutes._id, verNum);
+      const reloaded = await getMinutesById(minutes.id || minutes._id);
+      setMinutes(reloaded);
+      setContent(extractMarkdown(reloaded));
       setVersionDrawerOpen(false);
       showToast(`Restored version ${verNum} as new draft head`, 'success');
     } catch (err) {
@@ -401,8 +403,15 @@ export default function MinutesEditorPage() {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button
-                  onClick={() => {
-                    if (ver.body) setContent(ver.body);
+                  onClick={async () => {
+                    if (ver.body) {
+                      setContent(ver.body);
+                    } else {
+                      try {
+                        const vData = await getMinutesVersionBody(minutes.id || minutes._id, ver.version);
+                        if (vData && vData.body) setContent(vData.body);
+                      } catch (_) {}
+                    }
                     showToast(`Switched view to version ${ver.version}`, 'info');
                     setVersionDrawerOpen(false);
                   }}

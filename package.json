@@ -4,7 +4,10 @@
   "private": true,
   "description": "MeetTrack: High-trust meeting governance, quorum protocol, and cryptographic minute sealing platform",
   "scripts": {
-    "dev": "npm --prefix client run dev",
+    "start": "node scripts/start-all.js",
+    "dev": "node scripts/start-all.js",
+    "dev:client": "npm --prefix client run dev",
+    "dev:server": "npm --prefix server run dev",
     "build": "npm --prefix client run build",
     "preview": "npm --prefix client run preview",
     "server": "npm --prefix server run dev",
@@ -12,4 +15,3 @@
     "seed:demo": "npm --prefix server run seed"
   }
 }
-

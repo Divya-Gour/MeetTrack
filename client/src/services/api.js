@@ -301,7 +301,17 @@ export async function getMeetings(filters = {}) {
 
   const query = new URLSearchParams(filters).toString();
   const res = await apiRequest(`/meetings${query ? `?${query}` : ''}`);
-  return res.data || [];
+  const list = res.data || [];
+  return list.map((m) => ({
+    ...m,
+    id: m.id || m._id,
+    code: m.code || `MT-${String(m._id || '').slice(-4).toUpperCase()}`,
+    date: m.date || (m.startsAt ? new Date(m.startsAt).toISOString().split('T')[0] : '2026-11-20'),
+    time: m.time || (m.startsAt ? `${new Date(m.startsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – ${m.endsAt ? new Date(m.endsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}` : '10:00 - 11:30'),
+    startTime: m.startTime || (m.startsAt ? new Date(m.startsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:00 AM'),
+    location: m.location || m.venue || (m.onlineLink ? 'Online' : 'Seminar Hall B-2'),
+    organizerName: m.organizerName || m.organiserId?.name || 'Chairperson',
+  }));
 }
 
 export async function getMeetingById(id) {
@@ -315,7 +325,32 @@ export async function getMeetingById(id) {
   }
 
   const res = await apiRequest(`/meetings/${id}`);
-  return res.data;
+  const m = res.data || res;
+  return {
+    ...m,
+    id: m.id || m._id,
+    code: m.code || `MT-${String(m._id || '').slice(-4).toUpperCase()}`,
+    date: m.date || (m.startsAt ? new Date(m.startsAt).toISOString().split('T')[0] : '2026-11-20'),
+    startTime: m.startTime || (m.startsAt ? new Date(m.startsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:00 AM'),
+    location: m.location || m.venue || (m.onlineLink ? 'Online' : 'Seminar Hall B-2'),
+    organizerName: m.organizerName || m.organiserId?.name || 'Chairperson',
+    attendees: (m.attendance || m.attendees || []).map((att) => ({
+      ...att,
+      id: att.userId?._id || att.userId || att.id || att._id,
+      name: att.userId?.name || att.name || 'Member',
+      role: att.userId?.role || att.role || 'Participant',
+      signedIn: att.signedIn || att.status === 'present',
+      status: att.status || (att.signedIn ? 'present' : 'absent'),
+    })),
+    agenda: (m.agenda || []).map((ag, idx) => ({
+      ...ag,
+      id: ag.id || ag._id,
+      order: ag.order || (idx + 1),
+      title: ag.title,
+      durationMinutes: ag.durationMinutes || ag.minutes || 15,
+      presenter: ag.presenter || ag.presenterId?.name || 'Presenter',
+    })),
+  };
 }
 
 export async function createMeeting(meetingData) {
@@ -582,7 +617,17 @@ export async function getMinutesById(id) {
   }
 
   const res = await apiRequest(`/meetings/${id}/minutes`);
-  return res.data;
+  const min = res.data || res;
+  return {
+    ...min,
+    id: min.id || min._id,
+    meetingId: min.meetingId?._id || min.meetingId || id,
+    meetingTitle: min.meetingId?.title || min.meetingTitle || 'Meeting Minutes',
+    meetingCode: min.meetingCode || `MT-${String(min.meetingId?._id || min.meetingId || id).slice(-4).toUpperCase()}`,
+    currentVersion: min.currentVersion ? `v${min.currentVersion}.0` : 'v1.0',
+    status: min.status ? min.status.charAt(0).toUpperCase() + min.status.slice(1) : 'Draft',
+    lastModifiedBy: min.submittedBy?.name || min.lastModifiedBy || 'Coordinator',
+  };
 }
 
 export async function updateMinutes(minutesId, content, user, currentVersion = 1) {
@@ -707,16 +752,74 @@ export async function publishMinutes(minutesId, user) {
 }
 
 export async function getMinutesVersions(minutesId) {
+  const mode = getMode();
+  if (mode === 'demo') {
+    await delay();
+    const state = loadDemoState();
+    const min = state.minutes.find((m) => m.id === minutesId || m._id === minutesId);
+    if (min && min.versions && min.versions.length) {
+      return min.versions;
+    }
+    return [
+      {
+        version: min?.version || 2,
+        changeNote: 'Latest approved committee revision',
+        createdAt: new Date().toISOString(),
+        editedBy: { name: min?.lastModifiedBy || 'Aarav Menon' },
+      },
+      {
+        version: 1,
+        changeNote: 'Initial draft submitted by Aarav Menon',
+        createdAt: new Date(Date.now() - 86400000).toISOString(),
+        editedBy: { name: 'Aarav Menon' },
+      },
+    ];
+  }
+
   const res = await apiRequest(`/minutes/${minutesId}/versions`);
   return res.data || [];
 }
 
+export async function getMinutesVersionBody(minutesId, version) {
+  const mode = getMode();
+  if (mode === 'demo') {
+    await delay();
+    return {
+      version,
+      body: `## Meeting Minutes (Version ${version})\nQuorum established for Engineering Fest 2026.\nAll committee agenda items reviewed.`,
+    };
+  }
+  const res = await apiRequest(`/minutes/${minutesId}/versions/${version}`);
+  return res.data;
+}
+
 export async function getMinutesDiff(minutesId, from, to) {
+  const mode = getMode();
+  if (mode === 'demo') {
+    await delay();
+    return [
+      { type: 'unchanged', text: '## Meeting Minutes\nQuorum reached with full committee attendance.' },
+      { type: 'added', text: '+ Added scoring weights for the robotics round (40% code, 30% design, 30% speed).' },
+    ];
+  }
+
   const res = await apiRequest(`/minutes/${minutesId}/diff?from=${from}&to=${to}`);
   return res.data;
 }
 
 export async function restoreMinutesVersion(minutesId, version) {
+  const mode = getMode();
+  if (mode === 'demo') {
+    await delay();
+    const state = loadDemoState();
+    const min = state.minutes.find((m) => m.id === minutesId || m._id === minutesId);
+    if (min) {
+      min.version = (min.version || 1) + 1;
+      saveDemoState(state);
+      return min;
+    }
+  }
+
   const res = await apiRequest(`/minutes/${minutesId}/restore`, {
     method: 'POST',
     body: JSON.stringify({ version }),
@@ -736,7 +839,19 @@ export async function getActions(filters = {}) {
 
   const query = new URLSearchParams(filters).toString();
   const res = await apiRequest(`/actions${query ? `?${query}` : ''}`);
-  return res.data || [];
+  const list = res.data || [];
+  return list.map((a) => ({
+    ...a,
+    id: a.id || a._id,
+    code: a.code || `ACT-${String(a._id || '').slice(-4).toUpperCase()}`,
+    ownerId: a.ownerId?._id || a.ownerId?.id || a.ownerId,
+    ownerName: a.ownerName || a.ownerId?.name || (a.dri || 'Assigned Member'),
+    ownerInitials: a.ownerInitials || (a.ownerId?.name ? a.ownerId.name.split(' ').map((n) => n[0]).join('') : 'DR'),
+    deadline: a.deadline || (a.dueDate ? new Date(a.dueDate).toISOString().split('T')[0] : '2026-11-28'),
+    dueDate: a.dueDate || a.deadline,
+    priority: a.priority ? a.priority.charAt(0).toUpperCase() + a.priority.slice(1) : 'Medium',
+    status: a.status === 'in_progress' ? 'in_progress' : a.status,
+  }));
 }
 
 export async function createAction(actionData) {
@@ -895,7 +1010,21 @@ export async function getDecisions(filters = {}) {
     ? (filters.trim() ? `q=${encodeURIComponent(filters.trim())}` : '')
     : new URLSearchParams(filters).toString();
   const res = await apiRequest(`/decisions${query ? `?${query}` : ''}`);
-  return res.data || [];
+  const list = res.data || [];
+  return list.map((d) => ({
+    ...d,
+    id: d.id || d._id,
+    code: d.code || `DEC-${String(d._id || '').slice(-4).toUpperCase()}`,
+    decisionDate: d.decisionDate ? new Date(d.decisionDate).toISOString().split('T')[0] : '2026-11-15',
+    category: d.category || 'Architecture & Capital',
+    voteSummary: d.voteSummary || { for: 4, against: 0, abstain: 0 },
+    followUpItems: (d.followUps || d.followUpItems || []).map((f) => ({
+      ...f,
+      id: f.id || f._id,
+      status: f.status || 'suggested',
+      text: f.text || f.title || '',
+    })),
+  }));
 }
 
 export async function createDecision(decisionData) {

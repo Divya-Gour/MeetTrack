@@ -6,7 +6,7 @@ const exportService = require('../services/export.service');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 // Role check per Section 6.10: Admins & Coordinators allowed; Participants receive 403
-router.use(requireAuth, requireRole('admin', 'coordinator'));
+router.use('/reports', requireAuth, requireRole('admin', 'coordinator'));
 
 // GET /api/reports/summary per Section 6.10
 router.get('/reports/summary', async (req, res, next) => {

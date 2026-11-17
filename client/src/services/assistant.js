@@ -10,7 +10,7 @@ import { apiRequest } from './api';
 
 export function getAssistantMode() {
   const mode = localStorage.getItem('mt.mode') || 'demo';
-  return mode === 'live' ? 'api' : 'local';
+  return mode === 'live' ? 'api' : 'demo-gemini';
 }
 
 export async function sendAssistantMessage({
@@ -28,42 +28,52 @@ export async function sendAssistantMessage({
     throw new Error('Message is too long. Please shorten your prompt to under 5,000 words.');
   }
 
-  // ---------------- LIVE MODE (Server API with Gemini) ----------------
-  if (mode === 'live') {
-    try {
-      const formattedHistory = conversationHistory.map((m) => ({
-        role: m.sender === 'user' || m.role === 'user' ? 'user' : 'assistant',
-        content: m.text || m.content || '',
-      }));
+  // 1. First, attempt to call the backend Gemini endpoint in both Live and Demo modes
+  try {
+    const formattedHistory = conversationHistory.map((m) => ({
+      role: m.sender === 'user' || m.role === 'user' ? 'user' : 'assistant',
+      content: m.text || m.content || '',
+    }));
 
-      const res = await apiRequest('/assistant/chat', {
-        method: 'POST',
-        body: JSON.stringify({
-          messages: [...formattedHistory, { role: 'user', content: message }],
-          pageContext: `${currentRoute} (${userRole})`,
-        }),
-      });
+    const res = await apiRequest('/assistant/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        messages: [...formattedHistory, { role: 'user', content: message }],
+        pageContext: `${currentRoute} (${userRole})`,
+        isDemo: mode === 'demo',
+      }),
+    });
 
-      const result = res.data || res;
-      return {
-        reply: result.reply,
-        drafts: result.drafts || (result.draft ? [result.draft] : null),
-        mode: 'live',
-        notice: null,
-      };
-    } catch (err) {
+    const result = res.data || res;
+    return {
+      reply: result.reply,
+      drafts: result.drafts || (result.draft ? [result.draft] : null),
+      mode,
+      notice: mode === 'demo' ? 'Powered by Google Gemini (Engineering Fest Context)' : null,
+    };
+  } catch (err) {
+    // If rate-limited or input too large, bubble up error
+    if (err.code === 'ASSISTANT_LIMIT') {
+      throw new Error(`Assistant hourly rate limit reached. Please wait ${err.retryAfterSeconds || 60} seconds.`);
+    }
+    if (err.code === 'INPUT_TOO_LARGE') {
+      throw err;
+    }
+
+    // In Live mode, report error directly
+    if (mode === 'live') {
       if (err.code === 'ASSISTANT_UNAVAILABLE') {
         throw new Error('AI assistant is currently unavailable (GEMINI_API_KEY not configured on server).');
       }
-      if (err.code === 'ASSISTANT_LIMIT') {
-        throw new Error(`Assistant hourly rate limit reached. Please wait ${err.retryAfterSeconds || 60} seconds.`);
-      }
       throw new Error(`AI Assistant error: ${err.message}`);
     }
+
+    // In Demo mode, if server is unavailable or offline, gracefully fallback to local demo engine
+    console.warn('[Assistant] Falling back to offline demo engine:', err.message);
   }
 
-  // ---------------- DEMO MODE (Offline Engineering Fest Engine) ----------------
-  await new Promise((resolve) => setTimeout(resolve, 500)); // natural typing delay
+  // 2. Offline Demo Fallback Engine (runs only when offline or disconnected)
+  await new Promise((resolve) => setTimeout(resolve, 400));
 
   const state = loadDemoState();
   const lowerMsg = message.toLowerCase();
@@ -123,6 +133,6 @@ export async function sendAssistantMessage({
     reply,
     drafts,
     mode: 'demo',
-    notice: 'Demo mode: answers come from sample Engineering Fest data.',
+    notice: 'Offline demo mode: answers come from sample Engineering Fest data.',
   };
 }

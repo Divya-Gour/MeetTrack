@@ -206,11 +206,20 @@ export default function AssistantPanel({ isOpen, onClose }) {
         </div>
       )}
 
-      {assistantMode === 'local' && (
+      {assistantMode === 'demo-gemini' && (
         <div className="bg-surface-muted border-b border-border px-3 py-1.5 text-[11px] text-text-secondary flex items-start gap-1.5">
-          <Info className="w-3.5 h-3.5 text-accent-text shrink-0 mt-0.5" />
+          <Sparkles className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
           <span>
-            Demo mode: answers come from sample Engineering Fest data.
+            Demo mode: Connected to Google Gemini with sample Engineering Fest data.
+          </span>
+        </div>
+      )}
+
+      {assistantMode === 'api' && (
+        <div className="bg-surface-muted border-b border-border px-3 py-1.5 text-[11px] text-text-secondary flex items-start gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
+          <span>
+            Live workspace: Connected to Google Gemini.
           </span>
         </div>
       )}
