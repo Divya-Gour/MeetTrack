@@ -1,177 +1,227 @@
 // server/src/routes/minutes.js
-import express from 'express';
-import crypto from 'crypto';
-import Minutes from '../models/Minutes.js';
-import Meeting from '../models/Meeting.js';
-import { requireAuth, requireRole, requireWorkspace } from '../middleware/auth.js';
-
+const express = require('express');
 const router = express.Router();
-router.use(requireAuth, requireWorkspace);
+const minutesService = require('../services/minutes.service');
+const { requireAuth, requireRole, requireApprover } = require('../middleware/auth');
+const { Minutes, Meeting, Attendance, MinutesVersion } = require('../models');
 
-function computeHash(content) {
-  const str = JSON.stringify(content);
-  return crypto.createHash('sha256').update(str).digest('hex');
-}
-
-// GET /api/minutes/:id
-router.get('/:id', async (req, res) => {
+// GET /api/minutes per Section 6.5 & Frontend Approvals Queue
+router.get('/minutes', requireAuth, async (req, res, next) => {
   try {
-    const minutes = await Minutes.findOne({
-      $or: [{ _id: req.params.id }, { meetingId: req.params.id }],
+    const { status } = req.query;
+    const query = { workspaceId: req.workspaceId };
+
+    if (status) {
+      const statuses = status.split(',').map((s) => s.trim());
+      query.status = { $in: statuses };
+    }
+
+    const list = await Minutes.find(query)
+      .populate('meetingId', 'title startsAt venue status')
+      .populate('submittedBy', 'name email')
+      .populate('approvedBy', 'name email')
+      .sort({ updatedAt: -1 });
+
+    res.json({ data: list });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/meetings/:id/minutes per Section 6.5
+router.get('/meetings/:id/minutes', requireAuth, async (req, res, next) => {
+  try {
+    const minutes = await minutesService.getMinutesForMeeting({
+      meetingId: req.params.id,
       workspaceId: req.workspaceId,
+      userId: req.user._id,
+    });
+    res.json({ data: minutes });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /api/minutes/:id/draft per Section 6.5 (Autosave)
+router.put('/minutes/:id/draft', requireAuth, requireRole('admin', 'coordinator'), async (req, res, next) => {
+  try {
+    const ifMatch = req.headers['if-match'];
+    const { body, changeNote } = req.body;
+
+    const result = await minutesService.saveDraft({
+      minutesId: req.params.id,
+      workspaceId: req.workspaceId,
+      userId: req.user._id,
+      body,
+      changeNote,
+      ifMatchVersion: ifMatch,
     });
 
-    if (!minutes) {
-      // If none exists, generate blank document with standard Stitch section headings
-      return res.json({
-        id: `draft-${Date.now()}`,
-        meetingId: req.params.id,
-        title: 'Draft Minutes',
-        version: 1,
-        status: 'draft',
-        content: {
-          attendanceSummary: '',
-          discussionPoints: '',
-          decisions: '',
-          outcomes: '',
-        },
+    res.json({ data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/minutes/:id/versions per Section 6.5
+router.get('/minutes/:id/versions', requireAuth, async (req, res, next) => {
+  try {
+    const versions = await minutesService.listVersions({
+      minutesId: req.params.id,
+      workspaceId: req.workspaceId,
+    });
+    res.json({ data: versions });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/minutes/:id/versions/:n per Section 6.5
+router.get('/minutes/:id/versions/:n', requireAuth, async (req, res, next) => {
+  try {
+    const version = await minutesService.getVersionBody({
+      minutesId: req.params.id,
+      version: req.params.n,
+      workspaceId: req.workspaceId,
+    });
+    res.json({ data: version });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/minutes/:id/diff?from=n&to=m per Section 6.5
+router.get('/minutes/:id/diff', requireAuth, async (req, res, next) => {
+  try {
+    const { from, to } = req.query;
+    if (!from || !to) {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_FAILED', message: 'Query params from and to are required.' },
       });
     }
-
-    return res.json(minutes);
+    const diff = await minutesService.diffVersions({
+      minutesId: req.params.id,
+      fromVersion: from,
+      toVersion: to,
+      workspaceId: req.workspaceId,
+    });
+    res.json({ data: diff });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to fetch minutes.' });
+    next(err);
   }
 });
 
-// PUT /api/minutes/:id — Autosave draft
-router.put('/:id', requireRole('Admin', 'Coordinator'), async (req, res) => {
+// POST /api/minutes/:id/restore per Section 6.5
+router.post('/minutes/:id/restore', requireAuth, requireRole('admin', 'coordinator'), async (req, res, next) => {
   try {
-    const { content, title } = req.body;
-    let minutes = await Minutes.findOne({ _id: req.params.id, workspaceId: req.workspaceId });
-
-    if (minutes && minutes.status === 'published') {
-      return res.status(403).json({ error: 'Published minutes are cryptographically locked and read-only.' });
-    }
-
-    const sha256Hash = computeHash(content);
-
-    if (!minutes) {
-      minutes = await Minutes.create({
-        workspaceId: req.workspaceId,
-        meetingId: req.params.id,
-        title: title || 'Meeting Minutes',
-        version: 1,
-        status: 'draft',
-        content,
-        sha256Hash,
-        submittedBy: req.user.name,
-      });
-    } else {
-      minutes.content = content;
-      minutes.version += 1;
-      minutes.sha256Hash = sha256Hash;
-      minutes.updatedAt = new Date();
-      minutes.versions.push({
-        version: minutes.version,
-        content,
-        modifiedBy: req.user.name,
-        timestamp: new Date(),
-        sha256Hash,
-      });
-      await minutes.save();
-    }
-
-    return res.json(minutes);
+    const { version } = req.body;
+    const result = await minutesService.restoreVersion({
+      minutesId: req.params.id,
+      version,
+      workspaceId: req.workspaceId,
+      userId: req.user._id,
+    });
+    res.json({ data: result });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to save minutes.' });
+    next(err);
   }
 });
 
-// POST /api/minutes/:id/submit
-router.post('/:id/submit', requireRole('Admin', 'Coordinator'), async (req, res) => {
+// POST /api/minutes/:id/submit per Section 6.5
+router.post('/minutes/:id/submit', requireAuth, requireRole('admin', 'coordinator'), async (req, res, next) => {
   try {
-    const minutes = await Minutes.findOne({ _id: req.params.id, workspaceId: req.workspaceId });
-    if (!minutes) return res.status(404).json({ error: 'Minutes record not found.' });
-
-    minutes.status = 'submitted';
-    minutes.submittedBy = req.user.name;
-    minutes.submittedAt = new Date();
-    await minutes.save();
-
-    return res.json(minutes);
+    const submitted = await minutesService.submitMinutes({
+      minutesId: req.params.id,
+      workspaceId: req.workspaceId,
+      userId: req.user._id,
+    });
+    res.json({ data: submitted });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to submit minutes.' });
+    next(err);
   }
 });
 
-// POST /api/minutes/:id/approve
-router.post('/:id/approve', async (req, res) => {
+// POST /api/minutes/:id/approve per Section 6.5 (approver flag or admin)
+router.post('/minutes/:id/approve', requireAuth, requireApprover, async (req, res, next) => {
   try {
-    if (!req.membership.isApprover && req.membership.role !== 'Admin') {
-      return res.status(403).json({ error: 'Only designated minutes approvers or admins can approve.' });
-    }
-
-    const { notes } = req.body;
-    const minutes = await Minutes.findOne({ _id: req.params.id, workspaceId: req.workspaceId });
-    if (!minutes) return res.status(404).json({ error: 'Minutes record not found.' });
-
-    minutes.status = 'approved';
-    minutes.approvedBy = req.user.name;
-    minutes.approvedAt = new Date();
-    minutes.reviewNotes = notes || '';
-    await minutes.save();
-
-    return res.json(minutes);
+    const approved = await minutesService.approveMinutes({
+      minutesId: req.params.id,
+      workspaceId: req.workspaceId,
+      userId: req.user._id,
+    });
+    res.json({ data: approved });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to approve minutes.' });
+    next(err);
   }
 });
 
-// POST /api/minutes/:id/return
-router.post('/:id/return', async (req, res) => {
+// POST /api/minutes/:id/return per Section 6.5
+router.post('/minutes/:id/return', requireAuth, requireApprover, async (req, res, next) => {
   try {
-    if (!req.membership.isApprover && req.membership.role !== 'Admin') {
-      return res.status(403).json({ error: 'Only designated minutes approvers or admins can return minutes.' });
-    }
-
     const { comment } = req.body;
-    const minutes = await Minutes.findOne({ _id: req.params.id, workspaceId: req.workspaceId });
-    if (!minutes) return res.status(404).json({ error: 'Minutes record not found.' });
-
-    minutes.status = 'returned';
-    minutes.returnedBy = req.user.name;
-    minutes.returnedAt = new Date();
-    minutes.reviewNotes = comment || 'Returned for revision.';
-    await minutes.save();
-
-    return res.json(minutes);
+    const returned = await minutesService.returnMinutes({
+      minutesId: req.params.id,
+      workspaceId: req.workspaceId,
+      userId: req.user._id,
+      comment,
+    });
+    res.json({ data: returned });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to return minutes.' });
+    next(err);
   }
 });
 
-// POST /api/minutes/:id/publish
-router.post('/:id/publish', async (req, res) => {
+// POST /api/minutes/:id/publish per Section 6.5 (approver flag or admin)
+router.post('/minutes/:id/publish', requireAuth, requireApprover, async (req, res, next) => {
   try {
-    if (!req.membership.isApprover && req.membership.role !== 'Admin') {
-      return res.status(403).json({ error: 'Only authorized approvers or admins can publish and seal minutes.' });
+    const published = await minutesService.publishMinutes({
+      minutesId: req.params.id,
+      workspaceId: req.workspaceId,
+      userId: req.user._id,
+    });
+    res.json({ data: published });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/minutes/:id/pdf per Section 6.5
+router.get('/minutes/:id/pdf', requireAuth, async (req, res, next) => {
+  try {
+    const minutes = await Minutes.findOne({ _id: req.params.id, workspaceId: req.workspaceId });
+    if (!minutes) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Minutes not found.' } });
     }
 
-    const minutes = await Minutes.findOne({ _id: req.params.id, workspaceId: req.workspaceId });
-    if (!minutes) return res.status(404).json({ error: 'Minutes record not found.' });
+    // Permission check per Section 6.5: published for all members; drafts/submitted for coordinators, admins, approvers
+    const isPrivileged = req.membership.role === 'admin' || req.membership.role === 'coordinator' || req.membership.approver;
+    if (minutes.status !== 'published' && !isPrivileged) {
+      return res.status(403).json({
+        error: { code: 'FORBIDDEN', message: 'Only published minutes are accessible to participants.' },
+      });
+    }
 
-    minutes.status = 'published';
-    minutes.publishedBy = req.user.name;
-    minutes.publishedAt = new Date();
-    minutes.sha256Hash = computeHash(minutes.content);
-    await minutes.save();
+    const meeting = await Meeting.findById(minutes.meetingId);
+    const attendees = await Attendance.find({ meetingId: minutes.meetingId }).populate('userId', 'name');
+    const latestVersion = await MinutesVersion.findOne({
+      minutesId: minutes._id,
+      version: minutes.currentVersion,
+    });
 
-    return res.json(minutes);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="minutes-${minutes._id}.pdf"`);
+
+    const stream = minutesService.generateMinutesPdfStream(
+      minutes,
+      meeting,
+      attendees,
+      minutes.currentVersion,
+      latestVersion ? latestVersion.body : ''
+    );
+    stream.pipe(res);
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to publish minutes.' });
+    next(err);
   }
 });
 
-export default router;
-
+module.exports = router;

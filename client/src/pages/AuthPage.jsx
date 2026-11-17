@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../components/Toast';
+import { login, forgotPassword, resetPassword, getErrorMessage } from '../services/api';
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -93,42 +94,26 @@ export default function AuthPage() {
       }
 
       // Try Live Backend Login
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+      const data = await login({ email, password });
 
-      const data = await res.json();
-
-      if (res.ok && data.user) {
-        enterLiveMode(data.user, data.workspace);
+      if (data && data.user) {
+        enterLiveMode(data.user, data.workspace, data.membership);
         showToast({
           title: `Welcome back, ${data.user.name}`,
           description: `Connected to live workspace: ${data.workspace?.name || 'Workspace'}`,
           variant: 'success',
         });
         navigate('/dashboard');
-      } else {
-        const nextAttempts = failedAttempts + 1;
-        setFailedAttempts(nextAttempts);
-
-        if (nextAttempts >= 5 || data.locked) {
-          setIsLockedOut(true);
-          setErrorMessage('Too many failed attempts. Try again in 15 minutes.');
-        } else {
-          // Rule: Same error message for wrong email and wrong password
-          setErrorMessage('The email or password is incorrect.');
-        }
       }
     } catch (err) {
-      // If server is offline and credentials don't match demo
       const nextAttempts = failedAttempts + 1;
       setFailedAttempts(nextAttempts);
-      if (nextAttempts >= 5) {
+
+      if (err.code === 'ACCOUNT_LOCKED' || nextAttempts >= 5) {
         setIsLockedOut(true);
-        setErrorMessage('Too many failed attempts. Try again in 15 minutes.');
+        setErrorMessage(getErrorMessage(err) || 'Too many failed attempts. Try again in 15 minutes.');
       } else {
+        // Rule: Same error message for wrong email and wrong password
         setErrorMessage('The email or password is incorrect.');
       }
     } finally {
@@ -143,12 +128,8 @@ export default function AuthPage() {
     if (!forgotEmail) return;
 
     try {
-      await fetch('/api/auth/forgot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: forgotEmail }),
-      });
-    } catch (e) {}
+      await forgotPassword({ email: forgotEmail });
+    } catch (e) { }
 
     // Rule: Always return the same message whether account exists or not
     setForgotSubmitted(true);
@@ -169,19 +150,10 @@ export default function AuthPage() {
     }
 
     try {
-      const res = await fetch('/api/auth/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: resetToken, password: newPassword }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setErrorMessage(data.error || 'Password reset link is invalid or has expired.');
-        return;
-      }
+      await resetPassword({ token: resetToken, password: newPassword });
       setResetCompleted(true);
     } catch (err) {
-      setResetCompleted(true);
+      setErrorMessage(getErrorMessage(err) || 'Password reset link is invalid or has expired.');
     }
   };
 

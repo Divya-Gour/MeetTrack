@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../components/Toast';
 import Button from '../components/Button';
+import { getSetupStatus, setupWorkspace, getErrorMessage } from '../services/api';
 
 export default function SetupWizardPage() {
   const navigate = useNavigate();
@@ -70,13 +71,12 @@ export default function SetupWizardPage() {
   useEffect(() => {
     async function checkStatus() {
       try {
-        const res = await fetch('/api/auth/status');
-        const data = await res.json();
-        if (data.workspaceExists) {
+        const data = await getSetupStatus();
+        if (data && data.setupComplete) {
           setAlreadyExists(true);
         }
       } catch (err) {
-        // Server might be in dev mode or offline; allow setup
+        // Server might be offline; allow setup
       }
     }
     checkStatus();
@@ -132,54 +132,20 @@ export default function SetupWizardPage() {
     setErrorMessage('');
 
     const payload = {
-      admin: {
-        name: adminForm.name,
-        email: adminForm.email,
-        password: adminForm.password,
-      },
-      workspace: {
-        name: wsForm.name,
-        timezone: wsForm.timezone,
-        description: wsForm.description,
-      },
-      invites: invitedMembers,
-      firstMeeting: skipMeeting ? null : meetingForm.title ? meetingForm : null,
+      adminName: adminForm.name,
+      email: adminForm.email,
+      password: adminForm.password,
+      workspaceName: wsForm.name,
+      timezone: wsForm.timezone || 'Asia/Kolkata',
+      description: wsForm.description || '',
     };
 
     try {
-      const res = await fetch('/api/auth/setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setErrorMessage(data.error || 'Failed to complete workspace setup.');
-        setLoading(false);
-        return;
-      }
-
-      enterLiveMode(data.user, data.workspace);
+      const data = await setupWorkspace(payload);
+      enterLiveMode(data.user, data.workspace, data.membership);
       setStep(5); // Success step
     } catch (err) {
-      // In local dev without live MongoDB, simulate successful live setup
-      const simulatedUser = {
-        id: 'usr-admin-live',
-        name: adminForm.name,
-        email: adminForm.email,
-        role: 'Admin',
-        isApprover: true,
-      };
-      const simulatedWs = {
-        id: 'ws-live-1',
-        name: wsForm.name,
-        timezone: wsForm.timezone,
-        description: wsForm.description,
-      };
-      enterLiveMode(simulatedUser, simulatedWs);
-      setStep(5);
+      setErrorMessage(getErrorMessage(err) || 'Failed to complete workspace setup.');
     } finally {
       setLoading(false);
     }

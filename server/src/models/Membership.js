@@ -1,22 +1,46 @@
 // server/src/models/Membership.js
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
-const MembershipSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true },
-  role: {
-    type: String,
-    enum: ['Admin', 'Coordinator', 'Participant'],
-    default: 'Participant',
-    required: true,
+const membershipSchema = new mongoose.Schema(
+  {
+    workspaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Workspace',
+      required: true,
+      index: true,
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    role: {
+      type: String,
+      enum: ['admin', 'coordinator', 'participant'],
+      required: true,
+      default: 'participant',
+    },
+    approver: {
+      type: Boolean,
+      default: false,
+    },
+    status: {
+      type: String,
+      enum: ['active', 'suspended'],
+      default: 'active',
+    },
+    joinedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  isApprover: { type: Boolean, default: false },
-  responsibility: { type: String, default: '' },
-  status: { type: String, enum: ['active', 'invited', 'disabled'], default: 'active' },
-  joinedAt: { type: Date, default: Date.now },
-});
+  {
+    timestamps: false,
+  }
+);
 
-MembershipSchema.index({ userId: 1, workspaceId: 1 }, { unique: true });
+// Unique on workspaceId + userId
+membershipSchema.index({ workspaceId: 1, userId: 1 }, { unique: true });
 
-export default mongoose.models.Membership || mongoose.model('Membership', MembershipSchema);
-
+module.exports = mongoose.model('Membership', membershipSchema, 'memberships');

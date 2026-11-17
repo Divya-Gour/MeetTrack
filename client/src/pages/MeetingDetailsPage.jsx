@@ -17,10 +17,17 @@ import {
   Shield,
   Download,
   AlertCircle,
+  Trash2,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { canEditMeetings } from '../auth/permissions';
-import { getMeetingById } from '../services/api';
+import {
+  getMeetingById,
+  addAgendaItem,
+  deleteAgendaItem,
+  updateMeetingAttendance,
+  getMeetingIcsUrl,
+} from '../services/api';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Pill from '../components/Pill';
@@ -59,43 +66,74 @@ export default function MeetingDetailsPage() {
     );
   }
 
-  const handleAddAgenda = (e) => {
+  const handleAddAgenda = async (e) => {
     e.preventDefault();
     if (!agendaTitle.trim()) return;
 
-    const newAgenda = {
-      id: `ag-${Date.now()}`,
-      order: (meeting.agenda?.length || 0) + 1,
-      title: agendaTitle,
-      durationMinutes: parseInt(agendaDuration, 10) || 15,
-      presenter: agendaPresenter,
-      notes: '',
-      hasActions: false,
-    };
+    try {
+      const added = await addAgendaItem(meeting.id || meeting._id, {
+        title: agendaTitle,
+        durationMinutes: parseInt(agendaDuration, 10) || 15,
+        presenter: agendaPresenter,
+      });
 
-    setMeeting({
-      ...meeting,
-      agenda: [...(meeting.agenda || []), newAgenda],
-    });
-    setAddAgendaModalOpen(false);
-    setAgendaTitle('');
-    showToast('Agenda item appended to quorum protocol', 'success');
+      setMeeting((prev) => ({
+        ...prev,
+        agenda: [...(prev.agenda || []), added],
+      }));
+      setAddAgendaModalOpen(false);
+      setAgendaTitle('');
+      showToast('Agenda item appended to quorum protocol', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   };
 
-  const toggleAttendance = (attendeeIdx) => {
+  const handleDeleteAgenda = async (agendaItemId) => {
+    try {
+      await deleteAgendaItem(agendaItemId, meeting.id || meeting._id);
+      setMeeting((prev) => ({
+        ...prev,
+        agenda: (prev.agenda || []).filter((a) => a.id !== agendaItemId && a._id !== agendaItemId),
+      }));
+      showToast('Agenda item removed', 'info');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const toggleAttendance = async (attendeeIdx) => {
     if (!isCoordinator) {
       showToast('Only Coordinators can record attendance sign-offs', 'info');
       return;
     }
-    const updated = [...meeting.attendees];
+    const updated = [...(meeting.attendees || [])];
     const curr = updated[attendeeIdx];
-    curr.signedIn = !curr.signedIn;
-    curr.attendance = curr.signedIn ? 'Present' : 'Absent';
-    setMeeting({ ...meeting, attendees: updated });
-    showToast(`Updated attendance for ${curr.name}`, 'info');
+    if (!curr) return;
+    const isCurrentlyPresent = curr.signedIn || curr.status === 'present';
+    const newStatus = isCurrentlyPresent ? 'absent' : 'present';
+    curr.signedIn = newStatus === 'present';
+    curr.status = newStatus;
+    curr.attendance = newStatus === 'present' ? 'Present' : 'Absent';
+
+    try {
+      await updateMeetingAttendance(meeting.id || meeting._id, [
+        { userId: curr.userId || curr.id || curr._id, status: newStatus },
+      ]);
+      setMeeting({ ...meeting, attendees: updated });
+      showToast(`Updated attendance for ${curr.name}`, 'info');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   };
 
-  const signedInCount = meeting.attendees?.filter((a) => a.signedIn).length || 0;
+  const handleExportPacket = () => {
+    const url = getMeetingIcsUrl(meeting.id || meeting._id);
+    window.open(url, '_blank');
+    showToast('Exporting calendar ICS invite...', 'info');
+  };
+
+  const signedInCount = meeting.attendees?.filter((a) => a.signedIn || a.status === 'present').length || 0;
 
   return (
     <div className="space-y-6 animate-fade-in font-body">
@@ -161,9 +199,9 @@ export default function MeetingDetailsPage() {
               variant="secondary"
               size="md"
               icon={Download}
-              onClick={() => showToast('Exporting executive meeting packet...', 'info')}
+              onClick={handleExportPacket}
             >
-              Export Packet
+              Export Packet (.ICS)
             </Button>
           </div>
         </div>
@@ -231,13 +269,23 @@ export default function MeetingDetailsPage() {
                       </p>
                     )}
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="text-right shrink-0 flex flex-col items-end gap-1">
                     <span className="text-xs font-mono font-medium text-text-secondary block">
                       {ag.durationMinutes} mins
                     </span>
                     <span className="text-[11px] text-text-primary font-semibold">
                       Presenter: {ag.presenter}
                     </span>
+                    {isCoordinator && (
+                      <button
+                        onClick={() => handleDeleteAgenda(ag.id || ag._id)}
+                        className="text-[11px] text-text-secondary hover:text-danger flex items-center gap-1 mt-1 transition-colors"
+                        title="Delete agenda item"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Remove</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </Card>

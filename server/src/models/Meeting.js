@@ -1,38 +1,86 @@
 // server/src/models/Meeting.js
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
-const MeetingSchema = new mongoose.Schema({
-  workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true },
-  title: { type: String, required: true },
-  date: { type: String, required: true },
-  time: { type: String, required: true },
-  location: { type: String, default: 'Seminar Hall B-2' },
-  isOnline: { type: Boolean, default: false },
-  recurring: { type: String, default: 'none' },
-  description: { type: String, default: '' },
-  status: { type: String, enum: ['Scheduled', 'In-Progress', 'Completed', 'Cancelled'], default: 'Scheduled' },
-  quorumRequired: { type: Number, default: 4 },
-  quorumMet: { type: Boolean, default: false },
-  chairperson: { type: String },
-  minutesId: { type: mongoose.Schema.Types.ObjectId, ref: 'Minutes', default: null },
-  attendees: [
-    {
-      id: String,
-      name: String,
-      role: String,
-      status: { type: String, enum: ['confirmed', 'tentative', 'declined'], default: 'confirmed' },
+const meetingSchema = new mongoose.Schema(
+  {
+    workspaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Workspace',
+      required: true,
+      index: true,
     },
-  ],
-  agenda: [
-    {
-      id: String,
-      title: String,
-      presenter: String,
-      durationMin: Number,
+    title: {
+      type: String,
+      required: true,
+      trim: true,
     },
-  ],
-  createdAt: { type: Date, default: Date.now },
-});
+    type: {
+      type: String,
+      default: 'regular',
+      trim: true,
+    },
+    startsAt: {
+      type: Date,
+      required: true,
+      index: true,
+    },
+    endsAt: {
+      type: Date,
+      required: true,
+    },
+    venue: {
+      type: String,
+      default: '',
+    },
+    onlineLink: {
+      type: String,
+      default: '',
+    },
+    organiserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ['scheduled', 'in_progress', 'completed', 'cancelled'],
+      default: 'scheduled',
+      index: true,
+    },
+    recurrence: {
+      type: String,
+      enum: ['none', 'daily', 'weekly', 'monthly'],
+      default: 'none',
+    },
+    templateId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'MeetingTemplate',
+      default: null,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+    reminderSentAt: {
+      type: Date,
+      default: null,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    timestamps: false,
+  }
+);
 
-export default mongoose.models.Meeting || mongoose.model('Meeting', MeetingSchema);
+// Meetings index on workspaceId, startsAt per Section 3
+meetingSchema.index({ workspaceId: 1, startsAt: 1 });
 
+module.exports = mongoose.model('Meeting', meetingSchema, 'meetings');

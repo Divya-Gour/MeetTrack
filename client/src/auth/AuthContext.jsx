@@ -1,12 +1,11 @@
 // client/src/auth/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { loadDemoState, saveDemoState, resetDemoState } from '../data/demoStore';
+import { getCurrentUser, logout as apiLogout } from '../services/api';
 
 const AuthContext = createContext();
 
 const STORAGE_MODE_KEY = 'mt.mode';
-const STORAGE_LIVE_USER_KEY = 'mt.live.user';
-const STORAGE_LIVE_WS_KEY = 'mt.live.workspace';
 const STORAGE_DEMO_USER_ID = 'mt.demo.userId';
 
 export function AuthProvider({ children }) {
@@ -27,12 +26,6 @@ export function AuthProvider({ children }) {
       const user = state.users.find((u) => u.id === savedId) || state.users[1]; // Priya Nair by default
       return user;
     }
-    if (savedMode === 'live') {
-      try {
-        const liveUser = localStorage.getItem(STORAGE_LIVE_USER_KEY);
-        if (liveUser) return JSON.parse(liveUser);
-      } catch (e) {}
-    }
     return null;
   });
 
@@ -41,14 +34,47 @@ export function AuthProvider({ children }) {
     if (savedMode === 'demo') {
       return loadDemoState().workspace;
     }
-    if (savedMode === 'live') {
-      try {
-        const liveWs = localStorage.getItem(STORAGE_LIVE_WS_KEY);
-        if (liveWs) return JSON.parse(liveWs);
-      } catch (e) {}
-    }
     return null;
   });
+
+  const [isLoadingAuth, setIsLoadingAuth] = useState(mode === 'live');
+
+  // Restore live session on mount or when mode is set to 'live' per Section 5
+  useEffect(() => {
+    if (mode === 'live') {
+      setIsLoadingAuth(true);
+      getCurrentUser()
+        .then((data) => {
+          if (data && data.user) {
+            const userWithRole = {
+              ...data.user,
+              id: data.user._id || data.user.id,
+              role: data.membership?.role ? (data.membership.role.charAt(0).toUpperCase() + data.membership.role.slice(1)) : 'Participant',
+              isApprover: Boolean(data.membership?.approver),
+              initials: data.user.name ? data.user.name.split(' ').map((n) => n[0]).join('') : 'U',
+            };
+            setCurrentUser(userWithRole);
+            setCurrentWorkspace(data.workspace);
+          } else {
+            setCurrentUser(null);
+            setCurrentWorkspace(null);
+            setMode(null);
+            localStorage.removeItem(STORAGE_MODE_KEY);
+          }
+        })
+        .catch(() => {
+          setCurrentUser(null);
+          setCurrentWorkspace(null);
+          setMode(null);
+          localStorage.removeItem(STORAGE_MODE_KEY);
+        })
+        .finally(() => {
+          setIsLoadingAuth(false);
+        });
+    } else {
+      setIsLoadingAuth(false);
+    }
+  }, [mode]);
 
   // Sync mode changes to localStorage
   useEffect(() => {
@@ -56,8 +82,6 @@ export function AuthProvider({ children }) {
       localStorage.setItem(STORAGE_MODE_KEY, mode);
     } else {
       localStorage.removeItem(STORAGE_MODE_KEY);
-      localStorage.removeItem(STORAGE_LIVE_USER_KEY);
-      localStorage.removeItem(STORAGE_LIVE_WS_KEY);
       localStorage.removeItem(STORAGE_DEMO_USER_ID);
     }
   }, [mode]);
@@ -77,7 +101,7 @@ export function AuthProvider({ children }) {
   const switchDemoRole = useCallback((roleName) => {
     if (mode !== 'demo') return;
     const state = loadDemoState();
-    const targetUser = state.users.find((u) => u.role === roleName) || state.users[0];
+    const targetUser = state.users.find((u) => u.role.toLowerCase() === roleName.toLowerCase()) || state.users[0];
     setCurrentUser(targetUser);
     localStorage.setItem(STORAGE_DEMO_USER_ID, targetUser.id);
   }, [mode]);
@@ -102,22 +126,26 @@ export function AuthProvider({ children }) {
   }, [currentUser]);
 
   // Live Mode Handlers
-  const enterLiveMode = useCallback((user, workspace) => {
+  const enterLiveMode = useCallback((user, workspace, membership = {}) => {
     setMode('live');
-    setCurrentUser(user);
+    const userWithRole = {
+      ...user,
+      id: user._id || user.id,
+      role: membership?.role ? (membership.role.charAt(0).toUpperCase() + membership.role.slice(1)) : (user.role || 'Admin'),
+      isApprover: Boolean(membership?.approver || user.isApprover),
+      initials: user.name ? user.name.split(' ').map((n) => n[0]).join('') : 'U',
+    };
+    setCurrentUser(userWithRole);
     setCurrentWorkspace(workspace);
     localStorage.setItem(STORAGE_MODE_KEY, 'live');
-    localStorage.setItem(STORAGE_LIVE_USER_KEY, JSON.stringify(user));
-    localStorage.setItem(STORAGE_LIVE_WS_KEY, JSON.stringify(workspace));
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await apiLogout();
     setMode(null);
     setCurrentUser(null);
     setCurrentWorkspace(null);
     localStorage.removeItem(STORAGE_MODE_KEY);
-    localStorage.removeItem(STORAGE_LIVE_USER_KEY);
-    localStorage.removeItem(STORAGE_LIVE_WS_KEY);
     localStorage.removeItem(STORAGE_DEMO_USER_ID);
   }, []);
 
@@ -132,6 +160,7 @@ export function AuthProvider({ children }) {
         currentUser,
         currentWorkspace,
         isAuthenticated,
+        isLoadingAuth,
         enterDemoMode,
         switchDemoRole,
         switchDemoUser,
@@ -139,6 +168,7 @@ export function AuthProvider({ children }) {
         enterLiveMode,
         logout,
         demoUsers: demoState.users,
+        allUsers: demoState.users,
       }}
     >
       {children}

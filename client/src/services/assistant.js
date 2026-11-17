@@ -6,6 +6,7 @@
 
 import { DEMO_KNOWLEDGE_BASE } from '../data/assistantKnowledge';
 import { loadDemoState, isDemoActionOverdue } from '../data/demoStore';
+import { apiRequest } from './api';
 
 export function getAssistantMode() {
   const mode = localStorage.getItem('mt.mode') || 'demo';
@@ -30,33 +31,34 @@ export async function sendAssistantMessage({
   // ---------------- LIVE MODE (Server API with Gemini) ----------------
   if (mode === 'live') {
     try {
-      const response = await fetch('/api/assistant/chat', {
+      const formattedHistory = conversationHistory.map((m) => ({
+        role: m.sender === 'user' || m.role === 'user' ? 'user' : 'assistant',
+        content: m.text || m.content || '',
+      }));
+
+      const res = await apiRequest('/assistant/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [...conversationHistory, { role: 'user', content: message }],
-          pageContext: {
-            currentRoute,
-            userRole,
-            userId: user?.id,
-          },
+          messages: [...formattedHistory, { role: 'user', content: message }],
+          pageContext: `${currentRoute} (${userRole})`,
         }),
       });
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || `Assistant API returned status ${response.status}`);
-      }
-
-      const data = await response.json();
+      const result = res.data || res;
       return {
-        reply: data.reply,
-        drafts: data.drafts || (data.draft ? [data.draft] : null),
+        reply: result.reply,
+        drafts: result.drafts || (result.draft ? [result.draft] : null),
         mode: 'live',
         notice: null,
       };
     } catch (err) {
-      throw new Error(`Unable to reach MeetTrack AI Assistant: ${err.message}. Please verify the server is running with GEMINI_API_KEY.`);
+      if (err.code === 'ASSISTANT_UNAVAILABLE') {
+        throw new Error('AI assistant is currently unavailable (GEMINI_API_KEY not configured on server).');
+      }
+      if (err.code === 'ASSISTANT_LIMIT') {
+        throw new Error(`Assistant hourly rate limit reached. Please wait ${err.retryAfterSeconds || 60} seconds.`);
+      }
+      throw new Error(`AI Assistant error: ${err.message}`);
     }
   }
 

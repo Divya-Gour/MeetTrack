@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { canAccessReports } from '../auth/permissions';
-import { getActions, getMeetings, isActionOverdue } from '../services/api';
+import { getActions, getMeetings, isActionOverdue, API_BASE } from '../services/api';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Pill from '../components/Pill';
@@ -125,14 +125,24 @@ export default function ReportsPage() {
           </p>
         </div>
 
-        <Button
-          variant="secondary"
-          size="md"
-          icon={Download}
-          onClick={() => showToast('Exported Executive Analytics PDF Report', 'success')}
-        >
-          Export Executive Report
-        </Button>
+        <div className="flex items-center gap-2">
+          <a
+            href={`${API_BASE}/reports/actions.csv`}
+            download="actions-report.csv"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-btn border border-border bg-surface text-text-primary text-xs font-semibold hover:bg-surface-muted transition-colors"
+          >
+            <Download className="w-4 h-4 text-accent" />
+            <span>Export CSV</span>
+          </a>
+          <a
+            href={`${API_BASE}/reports/actions.pdf`}
+            download="actions-report.pdf"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-btn bg-accent text-accent-text text-xs font-semibold hover:bg-accent-hover transition-colors shadow-xs"
+          >
+            <Download className="w-4 h-4" />
+            <span>Export PDF</span>
+          </a>
+        </div>
       </div>
 
       {/* KPI Cards */}

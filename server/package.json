@@ -1,24 +1,27 @@
 {
   "name": "meettrack-server",
   "version": "2.0.0",
-  "type": "module",
   "description": "MeetTrack Live Governance Server with Express, Mongoose, and Gemini API",
-  "main": "src/index.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
-    "seed": "node scripts/seed-demo.js"
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "vitest run",
+    "seed:demo": "node scripts/seed-demo.js",
+    "db:inspect": "node scripts/inspect-db.js"
   },
   "dependencies": {
     "@google/genai": "^3.3.0",
-    "bcryptjs": "^2.4.3",
     "connect-mongo": "^5.1.0",
-    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-session": "^1.18.0",
-    "helmet": "^7.1.0",
     "mongoose": "^8.5.1",
-    "nodemailer": "^6.9.14"
+    "nodemailer": "^6.9.14",
+    "pdfkit": "^0.15.0"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0",
+    "vitest": "^2.0.0"
   }
 }

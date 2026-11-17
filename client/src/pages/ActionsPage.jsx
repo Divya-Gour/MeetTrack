@@ -27,6 +27,7 @@ import {
   reportActionBlocker,
   resolveActionBlocker,
   isActionOverdue,
+  getUsers,
 } from '../services/api';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -37,11 +38,12 @@ import EmptyState from '../components/EmptyState';
 import { useToast } from '../components/Toast';
 
 export default function ActionsPage() {
-  const { currentUser, allUsers } = useAuth();
+  const { currentUser, allUsers = [] } = useAuth();
   const { showToast } = useToast();
   const isCoordinator = canManageAllActions(currentUser);
 
   const [actions, setActions] = useState([]);
+  const [membersList, setMembersList] = useState(allUsers || []);
   const [activeTab, setActiveTab] = useState(isCoordinator ? 'all' : 'my'); // 'all' | 'my'
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -72,6 +74,11 @@ export default function ActionsPage() {
 
   useEffect(() => {
     fetchActionsList();
+    getUsers()
+      .then((users) => {
+        if (users && users.length) setMembersList(users);
+      })
+      .catch(() => { });
   }, []);
 
   const filteredActions = actions.filter((act) => {
@@ -109,7 +116,8 @@ export default function ActionsPage() {
 
   const handleReassign = async (newOwnerId) => {
     if (!selectedAction) return;
-    const targetUser = allUsers.find((u) => u.id === newOwnerId);
+    const targetUser = membersList.find((u) => u.id === newOwnerId || u._id === newOwnerId) ||
+      allUsers.find((u) => u.id === newOwnerId || u._id === newOwnerId);
     if (!targetUser) return;
 
     try {
@@ -158,7 +166,8 @@ export default function ActionsPage() {
     e.preventDefault();
     if (!newTitle.trim()) return;
 
-    const assignedUser = allUsers.find((u) => u.id === newOwnerId) || currentUser;
+    const assignedUser = membersList.find((u) => u.id === newOwnerId || u._id === newOwnerId) ||
+      allUsers.find((u) => u.id === newOwnerId || u._id === newOwnerId) || currentUser;
 
     try {
       const created = await createAction({
@@ -219,8 +228,8 @@ export default function ActionsPage() {
           <button
             onClick={() => setActiveTab('all')}
             className={`px-3 py-1.5 rounded-btn text-xs font-semibold transition-colors ${activeTab === 'all'
-                ? 'bg-text-primary text-bg font-bold shadow-xs'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-muted'
+              ? 'bg-text-primary text-bg font-bold shadow-xs'
+              : 'text-text-secondary hover:text-text-primary hover:bg-surface-muted'
               }`}
           >
             All Workspace Actions ({actions.length})
@@ -228,8 +237,8 @@ export default function ActionsPage() {
           <button
             onClick={() => setActiveTab('my')}
             className={`px-3 py-1.5 rounded-btn text-xs font-semibold transition-colors ${activeTab === 'my'
-                ? 'bg-text-primary text-bg font-bold shadow-xs'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-muted'
+              ? 'bg-text-primary text-bg font-bold shadow-xs'
+              : 'text-text-secondary hover:text-text-primary hover:bg-surface-muted'
               }`}
           >
             My Assigned Actions ({actions.filter((a) => a.ownerId === currentUser?.id).length})
@@ -428,8 +437,8 @@ export default function ActionsPage() {
                     onChange={(e) => handleReassign(e.target.value)}
                     className="h-8 px-2 rounded-btn bg-surface border border-border text-xs text-text-primary focus:outline-none"
                   >
-                    {allUsers.map((u) => (
-                      <option key={u.id} value={u.id}>
+                    {(membersList.length ? membersList : allUsers).map((u) => (
+                      <option key={u.id || u._id} value={u.id || u._id}>
                         Reassign: {u.name}
                       </option>
                     ))}
@@ -449,8 +458,8 @@ export default function ActionsPage() {
                     key={st}
                     onClick={() => handleStatusChange(st)}
                     className={`py-2 px-3 rounded-btn border text-center font-semibold transition-all ${selectedAction.status === st
-                        ? 'bg-text-primary text-bg font-bold border-text-primary'
-                        : 'bg-surface hover:bg-surface-muted text-text-secondary border-border'
+                      ? 'bg-text-primary text-bg font-bold border-text-primary'
+                      : 'bg-surface hover:bg-surface-muted text-text-secondary border-border'
                       }`}
                   >
                     {st}
@@ -519,8 +528,8 @@ export default function ActionsPage() {
                     <div
                       key={blk.id}
                       className={`p-3 rounded-card border text-xs space-y-1.5 ${blk.resolved
-                          ? 'bg-surface-muted/40 border-border text-text-secondary line-through'
-                          : 'bg-error-bg/30 border-error-border text-text-primary'
+                        ? 'bg-surface-muted/40 border-border text-text-secondary line-through'
+                        : 'bg-error-bg/30 border-error-border text-text-primary'
                         }`}
                     >
                       <p className="leading-relaxed">"{blk.reason}"</p>
@@ -583,8 +592,8 @@ export default function ActionsPage() {
                 onChange={(e) => setNewOwnerId(e.target.value)}
                 className="w-full h-9 px-2 rounded-input bg-surface border border-border text-xs focus:outline-none"
               >
-                {allUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
+                {(membersList.length ? membersList : allUsers).map((u) => (
+                  <option key={u.id || u._id} value={u.id || u._id}>
                     {u.name} ({u.role})
                   </option>
                 ))}

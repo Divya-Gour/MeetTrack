@@ -1,43 +1,65 @@
 // server/src/models/Minutes.js
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
-const MinutesSchema = new mongoose.Schema({
-  workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true },
-  meetingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Meeting', required: true },
-  title: { type: String, required: true },
-  version: { type: Number, default: 1 },
-  status: {
-    type: String,
-    enum: ['draft', 'submitted', 'approved', 'published', 'returned'],
-    default: 'draft',
-  },
-  submittedBy: { type: String },
-  submittedAt: { type: Date },
-  approvedBy: { type: String },
-  approvedAt: { type: Date },
-  publishedBy: { type: String },
-  publishedAt: { type: Date },
-  returnedBy: { type: String },
-  returnedAt: { type: Date },
-  reviewNotes: { type: String },
-  sha256Hash: { type: String },
-  content: {
-    attendanceSummary: { type: String, default: '' },
-    discussionPoints: { type: String, default: '' },
-    decisions: { type: String, default: '' },
-    outcomes: { type: String, default: '' },
-  },
-  versions: [
-    {
-      version: Number,
-      content: Object,
-      modifiedBy: String,
-      timestamp: { type: Date, default: Date.now },
-      sha256Hash: String,
+const minutesSchema = new mongoose.Schema(
+  {
+    workspaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Workspace',
+      required: true,
+      index: true,
     },
-  ],
-  updatedAt: { type: Date, default: Date.now },
-});
+    meetingId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Meeting',
+      required: true,
+      unique: true,
+      index: true,
+    },
+    status: {
+      type: String,
+      enum: ['draft', 'submitted', 'returned', 'approved', 'published'],
+      default: 'draft',
+      index: true,
+    },
+    currentVersion: {
+      type: Number,
+      default: 1,
+    },
+    submittedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    submittedAt: {
+      type: Date,
+      default: null,
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+    publishedAt: {
+      type: Date,
+      default: null,
+    },
+    returnComment: {
+      type: String,
+      default: null,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    timestamps: false,
+  }
+);
 
-export default mongoose.models.Minutes || mongoose.model('Minutes', MinutesSchema);
-
+module.exports = mongoose.model('Minutes', minutesSchema, 'minutes');

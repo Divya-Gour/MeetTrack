@@ -1,43 +1,116 @@
 // server/src/routes/decisions.js
-import express from 'express';
-import Decision from '../models/Decision.js';
-import { requireAuth, requireWorkspace } from '../middleware/auth.js';
-
+const express = require('express');
 const router = express.Router();
-router.use(requireAuth, requireWorkspace);
+const decisionService = require('../services/decision.service');
+const { requireAuth, requireRole } = require('../middleware/auth');
 
-// GET /api/decisions
-router.get('/', async (req, res) => {
+// GET /api/decisions per Section 6.7
+router.get('/decisions', requireAuth, async (req, res, next) => {
   try {
-    const decisions = await Decision.find({ workspaceId: req.workspaceId }).sort({ createdAt: -1 });
-    return res.json(decisions);
-  } catch (err) {
-    return res.status(500).json({ error: 'Failed to fetch decisions.' });
-  }
-});
-
-// POST /api/decisions
-router.post('/', async (req, res) => {
-  try {
-    const { title, description, category, impact, voteSummary, meetingTitle, followUps } = req.body;
-    if (!title) return res.status(400).json({ error: 'Decision title is required.' });
-
-    const decision = await Decision.create({
+    const { q, from, to } = req.query;
+    const decisions = await decisionService.listDecisions({
       workspaceId: req.workspaceId,
-      title,
-      description: description || '',
-      category: category || 'General',
-      impact: impact || 'Medium',
-      voteSummary: voteSummary || { for: 4, against: 0, abstain: 0 },
-      meetingTitle: meetingTitle || 'Live Governance Review',
-      followUps: followUps || [],
+      q,
+      from,
+      to,
     });
-
-    return res.status(201).json(decision);
+    res.json({ data: decisions });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to record decision.' });
+    next(err);
   }
 });
 
-export default router;
+// POST /api/decisions per Section 6.7 (coordinator or admin)
+router.post('/decisions', requireAuth, requireRole('admin', 'coordinator'), async (req, res, next) => {
+  try {
+    const { title, rationale, decisionDate, sourceMeetingId, linkedActionIds } = req.body;
+    const decision = await decisionService.createDecision({
+      workspaceId: req.workspaceId,
+      userId: req.user._id,
+      title,
+      rationale,
+      decisionDate,
+      sourceMeetingId,
+      linkedActionIds,
+    });
+    res.status(201).json({ data: decision });
+  } catch (err) {
+    next(err);
+  }
+});
 
+// PATCH /api/decisions/:id per Section 6.7 (coordinator or admin)
+router.patch('/decisions/:id', requireAuth, requireRole('admin', 'coordinator'), async (req, res, next) => {
+  try {
+    const updated = await decisionService.updateDecision({
+      decisionId: req.params.id,
+      workspaceId: req.workspaceId,
+      data: req.body,
+    });
+    res.json({ data: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/decisions/:id per Section 6.7 (coordinator or admin)
+router.delete('/decisions/:id', requireAuth, requireRole('admin', 'coordinator'), async (req, res, next) => {
+  try {
+    const result = await decisionService.deleteDecision({
+      decisionId: req.params.id,
+      workspaceId: req.workspaceId,
+    });
+    res.json({ data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/followup per Section 6.7
+router.get('/followup', requireAuth, async (req, res, next) => {
+  try {
+    const items = await decisionService.getFollowUpItems(req.workspaceId);
+    res.json({ data: items });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/followup/:id/decide per Section 6.7
+router.post('/followup/:id/decide', requireAuth, requireRole('admin', 'coordinator'), async (req, res, next) => {
+  try {
+    const { decision, text, targetMeetingId } = req.body;
+    const result = await decisionService.decideFollowUp({
+      followUpId: req.params.id,
+      workspaceId: req.workspaceId,
+      userId: req.user._id,
+      decision,
+      text,
+      targetMeetingId,
+    });
+    res.json({ data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/followup/save-to-agenda per Section 6.7
+router.post('/followup/save-to-agenda', requireAuth, requireRole('admin', 'coordinator'), async (req, res, next) => {
+  try {
+    const { meetingId } = req.body;
+    if (!meetingId) {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_FAILED', message: 'meetingId is required to save follow-ups.' },
+      });
+    }
+    const added = await decisionService.saveFollowUpToAgenda({
+      workspaceId: req.workspaceId,
+      meetingId,
+    });
+    res.json({ data: added });
+  } catch (err) {
+    next(err);
+  }
+});
+
+module.exports = router;

@@ -1,32 +1,57 @@
 // server/src/models/Decision.js
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
-const DecisionSchema = new mongoose.Schema({
-  workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true },
-  meetingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Meeting' },
-  meetingTitle: { type: String },
-  title: { type: String, required: true },
-  description: { type: String },
-  category: { type: String, default: 'General' },
-  impact: { type: String, enum: ['Low', 'Medium', 'High'], default: 'Medium' },
-  voteSummary: {
-    for: { type: Number, default: 0 },
-    against: { type: Number, default: 0 },
-    abstain: { type: Number, default: 0 },
-  },
-  sealedHash: { type: String },
-  status: { type: String, default: 'Active' },
-  followUps: [
-    {
-      id: String,
-      title: String,
-      assignedTo: String,
-      status: String,
+const decisionSchema = new mongoose.Schema(
+  {
+    workspaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Workspace',
+      required: true,
+      index: true,
     },
-  ],
-  recordedAt: { type: String, default: () => new Date().toISOString().split('T')[0] },
-  createdAt: { type: Date, default: Date.now },
-});
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    rationale: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    decisionDate: {
+      type: Date,
+      default: Date.now,
+      index: true,
+    },
+    sourceMeetingId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Meeting',
+      default: null,
+    },
+    linkedActionIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Action',
+      },
+    ],
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    timestamps: false,
+  }
+);
 
-export default mongoose.models.Decision || mongoose.model('Decision', DecisionSchema);
+// Decisions full-text index on title and rationale per Section 3
+decisionSchema.index({ title: 'text', rationale: 'text' });
+decisionSchema.index({ workspaceId: 1, decisionDate: -1 });
 
+module.exports = mongoose.model('Decision', decisionSchema, 'decisions');

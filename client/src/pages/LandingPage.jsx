@@ -21,12 +21,22 @@ import {
 import { useTheme } from '../app/theme';
 import { useAuth } from '../auth/AuthContext';
 import { Sun, Moon, Laptop } from 'lucide-react';
+import { getSetupStatus } from '../services/api';
 
 export default function LandingPage() {
   const { theme, setTheme } = useTheme();
   const { enterDemoMode } = useAuth();
   const navigate = useNavigate();
   const [activeWorkflowTab, setActiveWorkflowTab] = useState(0);
+  const [setupComplete, setSetupComplete] = useState(false);
+
+  useEffect(() => {
+    getSetupStatus()
+      .then((res) => {
+        if (res && res.setupComplete) setSetupComplete(true);
+      })
+      .catch(() => { });
+  }, []);
 
   const handleExploreDemo = () => {
     enterDemoMode('user-priya'); // Default demo persona: Priya Nair
@@ -162,20 +172,30 @@ export default function LandingPage() {
               <span>Explore Demo</span>
             </button>
 
-            <Link
-              to="/login"
-              className="text-[14px] font-semibold px-3 py-2 text-text-primary hover:text-text-secondary transition-colors"
-            >
-              Sign In
-            </Link>
-
-            <Link
-              to="/setup"
-              className="inline-flex items-center justify-center px-4 py-2 rounded-btn font-semibold text-[14px] bg-accent text-accent-text hover:bg-accent-hover active:scale-[0.98] transition-all shadow-sm"
-            >
-              <PlusCircle className="w-4 h-4 mr-1.5" />
-              <span>Create Workspace</span>
-            </Link>
+            {setupComplete ? (
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center px-4 py-2 rounded-btn font-semibold text-[14px] bg-accent text-accent-text hover:bg-accent-hover active:scale-[0.98] transition-all shadow-sm"
+              >
+                <span>Sign In</span>
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="text-[14px] font-semibold px-3 py-2 text-text-primary hover:text-text-secondary transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/setup"
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-btn font-semibold text-[14px] bg-accent text-accent-text hover:bg-accent-hover active:scale-[0.98] transition-all shadow-sm"
+                >
+                  <PlusCircle className="w-4 h-4 mr-1.5" />
+                  <span>Create Workspace</span>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -206,13 +226,22 @@ export default function LandingPage() {
               </p>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 w-full sm:w-auto mb-6">
-                <Link
-                  to="/setup"
-                  className="inline-flex items-center justify-center px-6 py-3.5 rounded-btn font-semibold text-[15px] bg-accent text-accent-text hover:bg-accent-hover active:scale-[0.98] transition-all shadow-sm"
-                >
-                  <PlusCircle className="w-4 h-4 mr-2" />
-                  <span>Create your workspace</span>
-                </Link>
+                {setupComplete ? (
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center justify-center px-6 py-3.5 rounded-btn font-semibold text-[15px] bg-accent text-accent-text hover:bg-accent-hover active:scale-[0.98] transition-all shadow-sm"
+                  >
+                    <span>Sign in to your workspace</span>
+                  </Link>
+                ) : (
+                  <Link
+                    to="/setup"
+                    className="inline-flex items-center justify-center px-6 py-3.5 rounded-btn font-semibold text-[15px] bg-accent text-accent-text hover:bg-accent-hover active:scale-[0.98] transition-all shadow-sm"
+                  >
+                    <PlusCircle className="w-4 h-4 mr-2" />
+                    <span>Create your workspace</span>
+                  </Link>
+                )}
 
                 <button
                   type="button"
@@ -468,14 +497,14 @@ export default function LandingPage() {
               <div
                 key={idx}
                 className={`bg-surface border rounded-card p-5 relative group transition-all ${stage.highlight
-                    ? 'border-2 border-accent shadow-sm'
-                    : 'border-border hover:border-accent'
+                  ? 'border-2 border-accent shadow-sm'
+                  : 'border-border hover:border-accent'
                   }`}
               >
                 <div
                   className={`w-9 h-9 rounded-btn flex items-center justify-center font-mono font-bold text-sm mb-3 transition-colors ${stage.highlight
-                      ? 'bg-accent text-accent-text'
-                      : 'bg-surface-muted text-text-primary group-hover:bg-accent group-hover:text-accent-text'
+                    ? 'bg-accent text-accent-text'
+                    : 'bg-surface-muted text-text-primary group-hover:bg-accent group-hover:text-accent-text'
                     }`}
                 >
                   {stage.num}

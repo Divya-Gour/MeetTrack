@@ -15,10 +15,18 @@ import {
   ArrowLeft,
   Save,
   Check,
+  Download,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { canEditMinutes, canPublishMinutes } from '../auth/permissions';
-import { getMinutesById, updateMinutes, submitMinutesForApproval } from '../services/api';
+import {
+  getMinutesById,
+  updateMinutes,
+  submitMinutesForApproval,
+  getMinutesVersions,
+  restoreMinutesVersion,
+  getMinutesPdfUrl,
+} from '../services/api';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Pill from '../components/Pill';
@@ -70,6 +78,37 @@ export default function MinutesEditorPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const [versionsList, setVersionsList] = useState([]);
+
+  const openVersionsDrawer = async () => {
+    setVersionDrawerOpen(true);
+    try {
+      const vers = await getMinutesVersions(minutes.id || minutes._id);
+      if (vers && vers.length) setVersionsList(vers);
+    } catch (err) {
+      // Use existing mock versions if endpoint not populated
+      if (minutes.versions) setVersionsList(minutes.versions);
+    }
+  };
+
+  const handleRestoreVersion = async (verNum) => {
+    try {
+      const restored = await restoreMinutesVersion(minutes.id || minutes._id, verNum);
+      setMinutes(restored);
+      setContent(extractMarkdown(restored));
+      setVersionDrawerOpen(false);
+      showToast(`Restored version ${verNum} as new draft head`, 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleExportPdf = () => {
+    const url = getMinutesPdfUrl(minutes.id || minutes._id);
+    window.open(url, '_blank');
+    showToast('Exporting official minutes PDF...', 'info');
+  };
+
   const canEdit = canEditMinutes(currentUser, minutes);
 
   const handleSave = async () => {
@@ -78,17 +117,27 @@ export default function MinutesEditorPage() {
       return;
     }
     try {
-      const updated = await updateMinutes(minutes.id, content, currentUser);
+      const updated = await updateMinutes(
+        minutes.id || minutes._id,
+        content,
+        currentUser,
+        minutes.currentVersion || 1
+      );
       setMinutes(updated);
       showToast('Draft version saved and recorded to memory', 'success');
     } catch (err) {
-      showToast(err.message, 'error');
+      if (err.status === 409 || err.code === 'VERSION_CONFLICT') {
+        setConflictSimulated(true);
+        showToast('Version conflict! A newer version was saved by another user.', 'error');
+      } else {
+        showToast(err.message, 'error');
+      }
     }
   };
 
   const handleSubmitApproval = async () => {
     try {
-      const submitted = await submitMinutesForApproval(minutes.id, currentUser);
+      const submitted = await submitMinutesForApproval(minutes.id || minutes._id, currentUser);
       setMinutes(submitted);
       showToast('Minutes submitted to committee approvers for sign-off!', 'success');
       navigate('/approvals');
@@ -153,14 +202,23 @@ export default function MinutesEditorPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2 self-end sm:self-center">
+        <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
           <Button
             variant="outline"
             size="sm"
             icon={History}
-            onClick={() => setVersionDrawerOpen(!versionDrawerOpen)}
+            onClick={openVersionsDrawer}
           >
-            Versions ({minutes.versions?.length || 1})
+            Versions ({versionsList.length || minutes.versions?.length || 1})
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={Download}
+            onClick={handleExportPdf}
+          >
+            Export PDF
           </Button>
 
           {canEdit && (
@@ -325,31 +383,42 @@ export default function MinutesEditorPage() {
         isOpen={versionDrawerOpen}
         onClose={() => setVersionDrawerOpen(false)}
         title="Immutable Version Log"
-        description="All revisions are indexed with cryptographic checksums."
+        description="All revisions are indexed with cryptographic checksums. Restore creates a new draft version."
       >
         <div className="space-y-3 text-xs">
-          {minutes.versions?.map((ver, idx) => (
+          {(versionsList.length ? versionsList : (minutes.versions || [{ version: minutes.currentVersion || 1, note: 'Current draft', modifiedBy: minutes.lastModifiedBy || 'Author', timestamp: 'Recent' }])).map((ver, idx) => (
             <div
-              key={idx}
-              className="p-3 rounded-btn bg-surface-muted/60 border border-border flex items-center justify-between"
+              key={ver.id || ver._id || idx}
+              className="p-3 rounded-btn bg-surface-muted/60 border border-border flex items-center justify-between gap-3"
             >
               <div>
                 <span className="font-mono font-bold text-text-primary block">
-                  {ver.version} • {ver.note}
+                  Version {ver.version} • {ver.changeNote || ver.note || 'Revision'}
                 </span>
                 <span className="text-[11px] text-text-secondary">
-                  By {ver.modifiedBy} at {ver.timestamp}
+                  By {ver.editedBy?.name || ver.modifiedBy || 'Author'} at {ver.createdAt ? new Date(ver.createdAt).toLocaleTimeString() : (ver.timestamp || 'Recorded')}
                 </span>
               </div>
-              <button
-                onClick={() => {
-                  showToast(`Switched view to baseline ${ver.version}`, 'info');
-                  setVersionDrawerOpen(false);
-                }}
-                className="px-2.5 py-1 rounded-btn bg-surface border border-border text-xs font-medium hover:bg-surface-hover"
-              >
-                Inspect
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    if (ver.body) setContent(ver.body);
+                    showToast(`Switched view to version ${ver.version}`, 'info');
+                    setVersionDrawerOpen(false);
+                  }}
+                  className="px-2.5 py-1 rounded-btn bg-surface border border-border text-xs font-medium hover:bg-surface-hover"
+                >
+                  View
+                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => handleRestoreVersion(ver.version)}
+                    className="px-2.5 py-1 rounded-btn bg-accent text-accent-text text-xs font-semibold hover:bg-accent-hover"
+                  >
+                    Restore
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

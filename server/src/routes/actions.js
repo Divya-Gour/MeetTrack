@@ -1,60 +1,153 @@
 // server/src/routes/actions.js
-import express from 'express';
-import Action from '../models/Action.js';
-import { requireAuth, requireWorkspace } from '../middleware/auth.js';
-
+const express = require('express');
 const router = express.Router();
-router.use(requireAuth, requireWorkspace);
+const actionService = require('../services/action.service');
+const { requireAuth, requireRole } = require('../middleware/auth');
 
-// GET /api/actions
-router.get('/', async (req, res) => {
+// GET /api/actions per Section 6.6
+router.get('/actions', requireAuth, async (req, res, next) => {
   try {
-    const actions = await Action.find({ workspaceId: req.workspaceId }).sort({ deadline: 1 });
-    return res.json(actions);
-  } catch (err) {
-    return res.status(500).json({ error: 'Failed to fetch actions.' });
-  }
-});
-
-// POST /api/actions
-router.post('/', async (req, res) => {
-  try {
-    const { title, dri, deadline, priority, notes, sourceMeeting } = req.body;
-    if (!title || !dri || !deadline) {
-      return res.status(400).json({ error: 'Title, single DRI, and deadline are required.' });
-    }
-
-    const action = await Action.create({
+    const { owner, status, priority, overdue, meetingId } = req.query;
+    const actions = await actionService.listActions({
       workspaceId: req.workspaceId,
-      title,
-      dri,
-      deadline,
-      priority: priority || 'Medium',
-      notes: notes || '',
-      sourceMeeting: sourceMeeting || '',
-      status: 'pending',
+      owner,
+      status,
+      priority,
+      overdue,
+      meetingId,
     });
-
-    return res.status(201).json(action);
+    res.json({ data: actions });
   } catch (err) {
-    return res.status(500).json({ error: `Create action failed: ${err.message}` });
+    next(err);
   }
 });
 
-// PATCH /api/actions/:id
-router.patch('/:id', async (req, res) => {
+// POST /api/actions per Section 6.6 (coordinator or admin)
+router.post('/actions', requireAuth, requireRole('admin', 'coordinator'), async (req, res, next) => {
   try {
-    const action = await Action.findOne({ _id: req.params.id, workspaceId: req.workspaceId });
-    if (!action) return res.status(404).json({ error: 'Action item not found.' });
-
-    Object.assign(action, req.body);
-    await action.save();
-
-    return res.json(action);
+    const { title, description, sourceMeetingId, decisionId, ownerId, priority, dueDate } = req.body;
+    const action = await actionService.createAction({
+      workspaceId: req.workspaceId,
+      userId: req.user._id,
+      title,
+      description,
+      sourceMeetingId,
+      decisionId,
+      ownerId,
+      priority,
+      dueDate,
+    });
+    res.status(201).json({ data: action });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to update action.' });
+    next(err);
   }
 });
 
-export default router;
+// PATCH /api/actions/:id per Section 6.6 (coordinator or admin)
+router.patch('/actions/:id', requireAuth, requireRole('admin', 'coordinator'), async (req, res, next) => {
+  try {
+    const updated = await actionService.updateAction({
+      actionId: req.params.id,
+      workspaceId: req.workspaceId,
+      userId: req.user._id,
+      data: req.body,
+    });
+    res.json({ data: updated });
+  } catch (err) {
+    next(err);
+  }
+});
 
+// POST /api/actions/:id/status per Section 6.6
+router.post('/actions/:id/status', requireAuth, async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    const updated = await actionService.updateActionStatus({
+      actionId: req.params.id,
+      workspaceId: req.workspaceId,
+      userId: req.user._id,
+      userRole: req.membership.role,
+      status,
+    });
+    res.json({ data: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/actions/:id/reassign per Section 6.6 (coordinator or admin)
+router.post('/actions/:id/reassign', requireAuth, requireRole('admin', 'coordinator'), async (req, res, next) => {
+  try {
+    const { ownerId, reason } = req.body;
+    const updated = await actionService.reassignAction({
+      actionId: req.params.id,
+      workspaceId: req.workspaceId,
+      userId: req.user._id,
+      ownerId,
+      reason,
+    });
+    res.json({ data: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/actions/:id/blockers per Section 6.6
+router.post('/actions/:id/blockers', requireAuth, async (req, res, next) => {
+  try {
+    const { reason } = req.body;
+    const blocker = await actionService.reportBlocker({
+      actionId: req.params.id,
+      workspaceId: req.workspaceId,
+      userId: req.user._id,
+      userRole: req.membership.role,
+      reason,
+    });
+    res.status(201).json({ data: blocker });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/blockers/:id/resolve per Section 6.6 (coordinator or admin)
+router.post('/blockers/:id/resolve', requireAuth, requireRole('admin', 'coordinator'), async (req, res, next) => {
+  try {
+    const resolved = await actionService.resolveBlocker({
+      blockerId: req.params.id,
+      workspaceId: req.workspaceId,
+      userId: req.user._id,
+    });
+    res.json({ data: resolved });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/blockers/:id/escalate per Section 6.6 (coordinator or admin)
+router.post('/blockers/:id/escalate', requireAuth, requireRole('admin', 'coordinator'), async (req, res, next) => {
+  try {
+    const escalated = await actionService.escalateBlocker({
+      blockerId: req.params.id,
+      workspaceId: req.workspaceId,
+      userId: req.user._id,
+    });
+    res.json({ data: escalated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/actions/:id/history per Section 6.6
+router.get('/actions/:id/history', requireAuth, async (req, res, next) => {
+  try {
+    const history = await actionService.getActionHistory({
+      actionId: req.params.id,
+      workspaceId: req.workspaceId,
+    });
+    res.json({ data: history });
+  } catch (err) {
+    next(err);
+  }
+});
+
+module.exports = router;

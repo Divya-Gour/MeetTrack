@@ -12,10 +12,11 @@ import {
   CheckCircle2,
   Sparkles,
   ExternalLink,
+  Download,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { canEditMeetings } from '../auth/permissions';
-import { getMeetings } from '../services/api';
+import { getMeetings, getCalendarIcsUrl } from '../services/api';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Pill from '../components/Pill';
@@ -41,10 +42,12 @@ export default function CalendarPage() {
 
   // Day meeting mapper
   const getMeetingsForDay = (day) => {
-    if (day === 16) return meetings.slice(0, 2);
-    if (day === 17) return meetings.slice(2, 3);
-    if (day === 10) return meetings.slice(3, 4);
-    return [];
+    return meetings.filter((m) => {
+      const dateStr = m.date || m.startsAt;
+      if (!dateStr) return false;
+      const d = new Date(dateStr);
+      return d.getDate() === day;
+    });
   };
 
   const selectedDayMeetings = getMeetingsForDay(selectedDay);
@@ -64,7 +67,16 @@ export default function CalendarPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <a
+            href={getCalendarIcsUrl()}
+            download="calendar.ics"
+            className="px-3 py-1.5 rounded-btn bg-surface border border-border text-xs font-semibold text-text-primary hover:bg-surface-muted flex items-center gap-1.5 transition-colors shadow-xs"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export Calendar (.ICS)</span>
+          </a>
+
           <div className="bg-surface border border-border p-1 rounded-btn flex items-center shadow-xs">
             <button
               onClick={() => setViewMode('month')}

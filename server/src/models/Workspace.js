@@ -1,15 +1,36 @@
 // server/src/models/Workspace.js
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
-const WorkspaceSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },
-  timezone: { type: String, default: 'Asia/Kolkata' },
-  description: { type: String, default: '' },
-  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  quorumThreshold: { type: Number, default: 4 },
-  tamperSealEnabled: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now },
-});
+const workspaceSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    timezone: {
+      type: String,
+      required: true,
+      default: 'UTC',
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    timestamps: false,
+  }
+);
 
-export default mongoose.models.Workspace || mongoose.model('Workspace', WorkspaceSchema);
-
+module.exports = mongoose.model('Workspace', workspaceSchema, 'workspaces');

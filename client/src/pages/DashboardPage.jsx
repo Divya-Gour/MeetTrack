@@ -25,7 +25,7 @@ import {
   Activity,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
-import { getMeetings, getActions, isActionOverdue } from '../services/api';
+import { getMeetings, getActions, isActionOverdue, createMeeting } from '../services/api';
 import Pill from '../components/Pill';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -78,25 +78,26 @@ export default function DashboardPage() {
 
   const openActionsCount = actions.filter((a) => a.status !== 'Completed').length;
 
-  const handleCreateMeeting = (e) => {
+  const handleCreateMeeting = async (e) => {
     e.preventDefault();
     if (!newMeetingTitle.trim()) return;
 
-    const newMtg = {
-      id: `mtg-${Date.now()}`,
-      code: `MT-2026-${String(meetings.length + 45).padStart(3, '0')}`,
-      title: newMeetingTitle,
-      date: newMeetingDate,
-      startTime: newMeetingTime,
-      status: 'Scheduled',
-      attendees: [{ name: currentUser.name, role: currentUser.role, signedIn: true }],
-      agenda: [{ order: 1, title: 'Session Introduction & Quorum Roll Call' }],
-    };
+    try {
+      const created = await createMeeting({
+        title: newMeetingTitle,
+        date: newMeetingDate,
+        time: newMeetingTime,
+        startsAt: new Date(`${newMeetingDate}T${newMeetingTime}:00`),
+        endsAt: new Date(new Date(`${newMeetingDate}T${newMeetingTime}:00`).getTime() + 60 * 60000),
+      });
 
-    setMeetings([newMtg, ...meetings]);
-    setNewMeetingModalOpen(false);
-    setNewMeetingTitle('');
-    showToast(`Meeting "${newMtg.title}" scheduled successfully!`, 'success');
+      setMeetings((prev) => [created, ...prev]);
+      setNewMeetingModalOpen(false);
+      setNewMeetingTitle('');
+      showToast(`Meeting "${created.title}" scheduled successfully!`, 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   };
 
   return (

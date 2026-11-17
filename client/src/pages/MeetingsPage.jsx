@@ -47,10 +47,10 @@ export default function MeetingsPage() {
   }, []);
 
   const filteredMeetings = meetings.filter((m) => {
-    const matchesStatus = filterStatus === 'All' || m.status === filterStatus;
+    const matchesStatus = filterStatus === 'All' || m.status === filterStatus || (m.status && m.status.toLowerCase() === filterStatus.toLowerCase());
     const matchesSearch =
-      m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.code.toLowerCase().includes(searchQuery.toLowerCase());
+      (m.title && m.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (m.code && m.code.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesStatus && matchesSearch;
   });
 

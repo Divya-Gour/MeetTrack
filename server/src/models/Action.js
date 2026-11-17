@@ -1,29 +1,76 @@
 // server/src/models/Action.js
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
-const ActionSchema = new mongoose.Schema({
-  workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true },
-  meetingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Meeting' },
-  title: { type: String, required: true },
-  dri: { type: String, required: true }, // Single Directly Responsible Individual mandate
-  driId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  priority: { type: String, enum: ['Low', 'Medium', 'High'], default: 'Medium' },
-  deadline: { type: String, required: true },
-  status: {
-    type: String,
-    enum: ['pending', 'in_progress', 'completed', 'blocked', 'overdue', 'cancelled'],
-    default: 'pending',
+const actionSchema = new mongoose.Schema(
+  {
+    workspaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Workspace',
+      required: true,
+      index: true,
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      default: '',
+    },
+    sourceMeetingId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Meeting',
+      default: null,
+    },
+    decisionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Decision',
+      default: null,
+    },
+    ownerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    priority: {
+      type: String,
+      enum: ['high', 'medium', 'low'],
+      default: 'medium',
+      index: true,
+    },
+    dueDate: {
+      type: Date,
+      required: true,
+      index: true,
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'in_progress', 'completed'],
+      default: 'pending',
+      index: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    completedAt: {
+      type: Date,
+      default: null,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  progressPercent: { type: Number, default: 0 },
-  sourceMeeting: { type: String },
-  notes: { type: String },
-  blocker: {
-    isBlocked: { type: Boolean, default: false },
-    reason: { type: String },
-    reportedAt: { type: Date },
-  },
-  createdAt: { type: Date, default: Date.now },
-});
+  {
+    timestamps: false,
+  }
+);
 
-export default mongoose.models.Action || mongoose.model('Action', ActionSchema);
+// Actions index on workspaceId, ownerId, status, dueDate per Section 3
+actionSchema.index({ workspaceId: 1, ownerId: 1, status: 1, dueDate: 1 });
 
+module.exports = mongoose.model('Action', actionSchema, 'actions');

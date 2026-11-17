@@ -17,6 +17,7 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../components/Toast';
 import Button from '../components/Button';
+import { getInviteInfo, acceptInvite, getErrorMessage } from '../services/api';
 
 export default function JoinInvitePage() {
   const { token } = useParams();
@@ -46,27 +47,13 @@ export default function JoinInvitePage() {
   useEffect(() => {
     async function fetchTokenInfo() {
       try {
-        const res = await fetch(`/api/invites/token/${token}`);
-        const data = await res.json();
-
-        if (!res.ok) {
-          setErrorStatus(data.status || 'invalid');
-        } else {
-          setInviteData(data);
-        }
+        const data = await getInviteInfo(token);
+        setInviteData(data);
       } catch (err) {
-        // Fallback for demo/dev token simulation
-        if (token && token.startsWith('demo-')) {
-          setInviteData({
-            workspaceName: 'Engineering Fest 2026 — Organising Committee',
-            email: 'invitee@engfest.org',
-            role: 'Participant',
-            isApprover: false,
-            inviterName: 'Aarav Menon',
-          });
-        } else {
-          setErrorStatus('invalid');
-        }
+        if (err.code === 'INVITE_EXPIRED') setErrorStatus('expired');
+        else if (err.code === 'INVITE_USED') setErrorStatus('accepted');
+        else if (err.code === 'INVITE_REVOKED') setErrorStatus('revoked');
+        else setErrorStatus('invalid');
       } finally {
         setLoading(false);
       }
@@ -90,47 +77,16 @@ export default function JoinInvitePage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch(`/api/invites/token/${token}/accept`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setFormError(data.error || 'Failed to accept invitation.');
-        setSubmitting(false);
-        return;
-      }
-
-      enterLiveMode(data.user, data.workspace);
+      const data = await acceptInvite(token, { name, password });
+      enterLiveMode(data.user, data.workspace, data.membership);
       showToast({
         title: 'Welcome to MeetTrack!',
-        description: `You have joined ${data.workspace?.name || 'the workspace'} as ${data.user?.role}.`,
+        description: `You have joined ${data.workspace?.name || 'the workspace'} as ${data.membership?.role || 'member'}.`,
         variant: 'success',
       });
       navigate('/dashboard');
     } catch (err) {
-      // Simulate successful join in dev mode
-      const user = {
-        id: `usr-${Date.now()}`,
-        name: name || 'Team Member',
-        email: inviteData?.email || 'invitee@acme.corp',
-        role: inviteData?.role || 'Participant',
-        isApprover: Boolean(inviteData?.isApprover),
-      };
-      const ws = {
-        id: 'ws-live-1',
-        name: inviteData?.workspaceName || 'Live Workspace',
-      };
-      enterLiveMode(user, ws);
-      showToast({
-        title: 'Welcome to MeetTrack!',
-        description: `You joined ${ws.name} as ${user.role}.`,
-        variant: 'success',
-      });
-      navigate('/dashboard');
+      setFormError(getErrorMessage(err) || 'Failed to accept invitation.');
     } finally {
       setSubmitting(false);
     }

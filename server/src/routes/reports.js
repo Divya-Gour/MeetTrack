@@ -1,43 +1,72 @@
 // server/src/routes/reports.js
-import express from 'express';
-import Meeting from '../models/Meeting.js';
-import Action from '../models/Action.js';
-import Minutes from '../models/Minutes.js';
-import Decision from '../models/Decision.js';
-import { requireAuth, requireRole, requireWorkspace } from '../middleware/auth.js';
-
+const express = require('express');
 const router = express.Router();
-router.use(requireAuth, requireWorkspace);
+const reportService = require('../services/report.service');
+const exportService = require('../services/export.service');
+const { requireAuth, requireRole } = require('../middleware/auth');
 
-// GET /api/reports — Computes live governance counts & KPIs
-router.get('/', requireRole('Admin', 'Coordinator'), async (req, res) => {
+// Role check per Section 6.10: Admins & Coordinators allowed; Participants receive 403
+router.use(requireAuth, requireRole('admin', 'coordinator'));
+
+// GET /api/reports/summary per Section 6.10
+router.get('/reports/summary', async (req, res, next) => {
   try {
-    const totalMeetings = await Meeting.countDocuments({ workspaceId: req.workspaceId });
-    const quorumMetMeetings = await Meeting.countDocuments({ workspaceId: req.workspaceId, quorumMet: true });
-    const totalActions = await Action.countDocuments({ workspaceId: req.workspaceId });
-    const completedActions = await Action.countDocuments({ workspaceId: req.workspaceId, status: 'completed' });
-    const blockedActions = await Action.countDocuments({ workspaceId: req.workspaceId, status: 'blocked' });
-    const totalDecisions = await Decision.countDocuments({ workspaceId: req.workspaceId });
-    const publishedMinutes = await Minutes.countDocuments({ workspaceId: req.workspaceId, status: 'published' });
-
-    const quorumRate = totalMeetings > 0 ? Math.round((quorumMetMeetings / totalMeetings) * 100) : 100;
-    const actionCompletionRate = totalActions > 0 ? Math.round((completedActions / totalActions) * 100) : 100;
-
-    return res.json({
-      totalMeetings,
-      quorumMetMeetings,
-      quorumRate,
-      totalActions,
-      completedActions,
-      blockedActions,
-      actionCompletionRate,
-      totalDecisions,
-      publishedMinutes,
+    const { from, to } = req.query;
+    const summary = await reportService.getSummaryReport({
+      workspaceId: req.workspaceId,
+      from,
+      to,
     });
+    res.json({ data: summary });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to generate governance report.' });
+    next(err);
   }
 });
 
-export default router;
+// GET /api/reports/owners per Section 6.10
+router.get('/reports/owners', async (req, res, next) => {
+  try {
+    const report = await reportService.getOwnerReport({ workspaceId: req.workspaceId });
+    res.json({ data: report });
+  } catch (err) {
+    next(err);
+  }
+});
 
+// GET /api/reports/status per Section 6.10
+router.get('/reports/status', async (req, res, next) => {
+  try {
+    const report = await reportService.getStatusReport({ workspaceId: req.workspaceId });
+    res.json({ data: report });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/reports/actions.csv per Section 6.10
+router.get('/reports/actions.csv', async (req, res, next) => {
+  try {
+    const csvContent = await exportService.exportActionsCsv(req.workspaceId);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="actions-report.csv"');
+    res.send(csvContent);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/reports/actions.pdf per Section 6.10
+router.get('/reports/actions.pdf', async (req, res, next) => {
+  try {
+    const actions = await exportService.getActionsForExport(req.workspaceId);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="actions-report.pdf"');
+
+    const stream = exportService.exportActionsPdfStream(actions);
+    stream.pipe(res);
+  } catch (err) {
+    next(err);
+  }
+});
+
+module.exports = router;
